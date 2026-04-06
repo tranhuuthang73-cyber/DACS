@@ -1,0 +1,75 @@
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+    <meta charset="utf-8">
+    <title>Huong Dan AMDGT</title>
+    <style>
+        body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; padding: 20px; }
+        h1 { color: #2C3E50; font-size: 16pt; }
+        h2 { color: #34495E; font-size: 14pt; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+        h3 { color: #2980B9; font-size: 12pt; }
+        code { background-color: #f1f2f6; padding: 2px 4px; border-radius: 4px; color: #c0392b; }
+        blockquote { border-left: 4px solid #3498db; margin-left: 0; padding-left: 15px; font-style: italic; color: #555; background-color: #f9f9f9; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>🧬 AMDGT - Hướng Dẫn Chạy &amp; Giải Thích Chi Tiết</h1>
+<h2>Đề Tài Đồ Án</h2>
+<p><strong>"Trích xuất đặc trưng topo (Persistent Homology) từ đồ thị Drug-Disease"</strong></p>
+<p>Sử dụng mô hình <strong>AMDGT</strong> (Attention-aware Multi-modal learning using Dual Graph Transformer) để dự đoán mối liên hệ giữa thuốc (Drug) và bệnh (Disease).</p>
+<hr />
+<h2>1. Tổng Quan Dự Án</h2>
+<h3>Mục tiêu</h3>
+<p>Dự đoán <strong>mối liên hệ Drug-Disease</strong> (thuốc nào có thể chữa bệnh nào) bằng cách:
+1. Xây dựng <strong>đồ thị</strong> biểu diễn mối quan hệ giữa Drug, Disease, Protein
+2. Trích xuất <strong>đặc trưng topo</strong> (Persistent Homology) từ các đồ thị
+3. Huấn luyện mô hình <strong>Graph Transformer</strong> để học và dự đoán</p>
+<h3>Cấu trúc thư mục định hướng</h3>
+<ul>
+<li><code>train_DDA.py</code>: Script huấn luyện chính</li>
+<li><code>data_preprocess.py</code>: Tiền xử lý dữ liệu</li>
+<li><code>persistent_homology.py</code>: Module trích xuất đặc trưng topo</li>
+<li><code>demo_persistent_homology.py</code>: Demo persistent homology</li>
+<li><code>model/</code>: Chứa mô hình chính (Dual Graph Transformer)</li>
+<li><code>data/</code>: Chứa các dataset (đang dùng C-dataset)</li>
+</ul>
+<hr />
+<h2>2. Quá Trình Chạy Chi Tiết</h2>
+<h3>🔹 Bước 1: Tiền xử lý dữ liệu (<code>data_preprocess.py</code>)</h3>
+<p>Tiến hành đọc dữ liệu từ các file CSV (thông tin vector đặc trưng của thuốc, bệnh, và các liên kết đã biết). Dữ liệu được chia thành các nhóm (10-fold cross validation) và xây dựng đồ thị tương đồng (similarity graph) cho Drug-Drug và Disease-Disease.</p>
+<h3>🔹 Bước 2: Trích xuất đặc trưng Persistent Homology (<code>persistent_homology.py</code>)</h3>
+<blockquote>
+<p>Đây là phần cốt lõi của đề tài - trích xuất đặc trưng topo từ đồ thị!</p>
+</blockquote>
+<p><strong>Persistent Homology</strong> là công cụ phân tích hình dạng dữ liệu (TDA). Quá trình diễn ra như sau:
+1. Tính ma trận khoảng cách đường đi ngắn nhất (Shortest Path Distance) từ đồ thị.
+2. Dùng thư viện Ripser để tính các biểu đồ "Persistence Diagrams".
+3. Theo dõi chu kỳ sống (birth - death) của các "thành phần liên thông" (H0) và "vòng/lỗ" (H1).
+4. Từ biểu đồ này trích xuất vector 50 chiều cho mỗi đồ thị bao gồm các đặc trưng như: Mean persistence, Max persistence, Entropy, Skewness, Percentiles...</p>
+<p>Đồ thị Drug-Disease có <strong>1072 nút</strong>, <strong>2532 cạnh</strong>, chia thành <strong>29 thành phần liên thông</strong>.</p>
+<h3>🔹 Bước 3: Mô hình AMNTDDA (<code>model/AMNTDDA.py</code>)</h3>
+<p>Mô hình sẽ áp dụng kiến trúc:
+1. <strong>Graph Transformer (GT)</strong> để học nội tại của các đồ thị Drug-Drug / Disease-Disease.
+2. <strong>Heterogeneous Graph Transformer (HGT)</strong> để học từ đồ thị dị thể kết hợp Drug-Disease-Protein.
+3. Liên kết kết quả lại qua Transformer Encoder và sử dụng một bộ phân loại (MLP Classifier) để cho ra xác suất cuối cùng (có hay không liên kết).</p>
+<h3>🔹 Bước 4: Huấn luyện (<code>train_DDA.py</code>)</h3>
+<p>Liên tục đưa dữ liệu qua mô hình (Forward), tính toán Loss và cập nhật (Backward). Quá trình sẽ sử dụng Weighted Loss để xử lý sự mất cân bằng dữ liệu và tự động dừng sớm (Early stopping) nếu kết quả AUC không tiến triển.</p>
+<hr />
+<h2>3. Kết Quả Chạy Thực Tế (Demo 50 epochs)</h2>
+<p>Với lần chạy demo ngắn 50 epochs (thay vì 1000):
+- <strong>Mean AUC</strong>: 0.5277 (± 0.092)
+- <strong>Mean AUPR</strong>: 0.5430 (± 0.063)</p>
+<p>(Kết quả sẽ nâng cao rất nhiều nếu chạy đầy đủ 1000 epoch như chuẩn của paper, có thể đạt AUC ~0.93+)</p>
+<hr />
+<h2>4. Cách Chạy (Hướng Dẫn)</h2>
+<p>Mở Terminal và làm theo các bước:</p>
+<p><strong>Kích hoạt môi trường ảo (venv):</strong>
+<code>d:\AMDGT-main\venv\Scripts\activate</code></p>
+<p><strong>1. Chạy demo phần Persistent Homology:</strong>
+<code>python demo_persistent_homology.py</code>
+(Giúp mường tượng cách hình học topo được tính)</p>
+<p><strong>2. Chạy training huấn luyện nhanh:</strong>
+<code>python train_DDA.py --epochs 50 --k_fold 2 --print_every 10</code></p>
+<p><strong>3. Chạy training chính quy đầy đủ (Để đạt kết quả cao nhất):</strong>
+<code>python train_DDA.py --epochs 1000 --k_fold 10 --print_every 100</code></p>
+</body>
+</html>
