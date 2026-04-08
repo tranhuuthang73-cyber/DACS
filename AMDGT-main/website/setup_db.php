@@ -145,6 +145,6 @@ echo "  Associations: $assocCount\n";
 echo "============================\n";
 echo "\nBước tiếp theo:\n";
 echo "1. Chạy AI Server: python website/ai_server.py\n";
-echo "2. Mở website: http://localhost/AMDGT-main/website/\n";
+echo "2. Mở website: http://localhost:88/AMDGT-main/website/\n";
 echo "</pre>";
 ?>

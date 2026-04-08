@@ -118,18 +118,24 @@ function viewDetails(queryValue, queryType, results) {
             <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(142, 45, 226, 0.2); color: var(--accent-light); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
                 <i class="fas fa-pills"></i>
             </div>
-            <div>
+            <div style="flex: 1;">
                 <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: normal; margin-bottom: 2px;">Dự đoán bệnh tiềm năng cho thuốc</div>
-                <div style="color: var(--text-primary);">${queryValue}</div>
+                <div style="color: var(--text-primary); font-size: 1.1rem;">${queryValue}</div>
+            </div>
+            <div>
+                <a href="predict.php?q=${encodeURIComponent(queryValue)}&type=drug" class="btn btn-sm btn-primary" style="text-decoration:none;"><i class="fas fa-cube"></i> Tái tạo 3D VIP</a>
             </div>`;
     } else {
         title.innerHTML = `
             <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(74, 0, 224, 0.2); color: var(--info); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
                 <i class="fas fa-virus"></i>
             </div>
-            <div>
+            <div style="flex: 1;">
                 <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: normal; margin-bottom: 2px;">Dự đoán thuốc điều trị cho bệnh</div>
-                <div style="color: var(--text-primary);">${queryValue}</div>
+                <div style="color: var(--text-primary); font-size: 1.1rem;">${queryValue}</div>
+            </div>
+            <div>
+                <a href="predict.php?q=${encodeURIComponent(queryValue)}&type=disease" class="btn btn-sm btn-primary" style="text-decoration:none;"><i class="fas fa-cube"></i> Tái tạo 3D VIP</a>
             </div>`;
     }
     
