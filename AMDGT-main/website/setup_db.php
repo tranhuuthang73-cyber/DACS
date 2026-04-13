@@ -1,11 +1,5 @@
 <?php
-/**
- * Database Setup Script
- * Chạy file này 1 lần để tạo database + import data
- * 
- * Cách chạy: mở trình duyệt http://localhost:88/AMDGT-main/website/setup_db.php
- * Hoặc: php setup_db.php
- */
+
 
 echo "<h1>🧬 AMDGT Database Setup</h1><pre>\n";
 
@@ -137,14 +131,5 @@ $drugCount = $pdo->query("SELECT COUNT(*) FROM drugs")->fetchColumn();
 $diseaseCount = $pdo->query("SELECT COUNT(*) FROM diseases")->fetchColumn();
 $assocCount = $pdo->query("SELECT COUNT(*) FROM known_associations")->fetchColumn();
 
-echo "\n============================\n";
-echo "[OK] SETUP COMPLETE!\n";
-echo "  Drugs: $drugCount\n";
-echo "  Diseases: $diseaseCount\n";
-echo "  Associations: $assocCount\n";
-echo "============================\n";
-echo "\nBước tiếp theo:\n";
-echo "1. Chạy AI Server: python website/ai_server.py\n";
-echo "2. Mở website: http://localhost:88/AMDGT-main/website/\n";
-echo "</pre>";
+
 ?>

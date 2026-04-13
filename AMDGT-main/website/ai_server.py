@@ -239,8 +239,7 @@ def explain():
 
 if __name__ == '__main__':
     load_model()
-    print("=" * 60)
     print("[AI] AMDGT AI Server running on http://localhost:5001")
-    print("[AI] PHP website sẽ gọi API vào đây")
+    print("[AI] PHP website will call API here")
     print("=" * 60)
     app.run(host='0.0.0.0', port=5001, debug=False)

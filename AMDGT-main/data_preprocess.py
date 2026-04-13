@@ -165,8 +165,8 @@ def dgl_similarity_graph(data, args):
     data['drdi_graph_stats'] = drdi_graph_stats
     # ================================================================
     
-    drdr_nx = nx.from_numpy_matrix(drdr_matrix)
-    didi_nx = nx.from_numpy_matrix(didi_matrix)
+    drdr_nx = nx.from_numpy_array(drdr_matrix)
+    didi_nx = nx.from_numpy_array(didi_matrix)
     drdr_graph = dgl.from_networkx(drdr_nx)
     didi_graph = dgl.from_networkx(didi_nx)
 

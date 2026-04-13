@@ -67,6 +67,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             jsonResponse(['success' => true]);
             break;
             
+        case 'add_drug':
+            $maxIdx = $db->query("SELECT MAX(idx) FROM drugs")->fetchColumn();
+            $newIdx = $maxIdx !== false ? (int)$maxIdx + 1 : 0;
+            $stmt = $db->prepare("INSERT INTO drugs (drug_id, name, idx) VALUES (?, ?, ?)");
+            try {
+                $stmt->execute([$input['drug_id'], $input['name'], $newIdx]);
+                jsonResponse(['success' => true]);
+            } catch (Exception $e) {
+                jsonResponse(['error' => $e->getMessage()], 400);
+            }
+            break;
+            
+        case 'add_disease':
+            $maxIdx = $db->query("SELECT MAX(idx) FROM diseases")->fetchColumn();
+            $newIdx = $maxIdx !== false ? (int)$maxIdx + 1 : 0;
+            $stmt = $db->prepare("INSERT INTO diseases (disease_id, name, idx) VALUES (?, ?, ?)");
+            try {
+                $stmt->execute([$input['disease_id'], $input['name'], $newIdx]);
+                jsonResponse(['success' => true]);
+            } catch (Exception $e) {
+                jsonResponse(['error' => $e->getMessage()], 400);
+            }
+            break;
+            
         case 'delete_drug':
             $stmt = $db->prepare("DELETE FROM drugs WHERE id = ?");
             $stmt->execute([$input['id']]);

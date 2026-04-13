@@ -355,7 +355,7 @@ function predictDrug() {
     const myGen = ++currentPredictionGeneration;
     
     const container = document.getElementById('results-container');
-    container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Hệ thống AI đang quét ma trận kết nối...</p></div>';
+    container.innerHTML = '<div class="loading"><div class="ai-scanner"></div><p>Hệ thống AI đang phân tích dữ liệu lâm sàng...</p></div>';
     
     fetch('api/predict.php', {
         method: 'POST',
@@ -414,7 +414,7 @@ function predictDisease() {
     const myGen = ++currentPredictionGeneration;
     
     const container = document.getElementById('results-container');
-    container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Hệ thống AI đang quét ma trận kết nối...</p></div>';
+    container.innerHTML = '<div class="loading"><div class="ai-scanner"></div><p>Hệ thống AI đang trích xuất đồ thị phân tử...</p></div>';
     
     document.getElementById('landscape-wrapper').style.display = 'none';
     document.getElementById('similar-drugs-wrapper').style.display = 'none';
@@ -582,7 +582,7 @@ function explainAI(drugIdx, diseaseIdx, targetName) {
     document.getElementById('xai-target-name').innerText = "Đối tượng phân tích: " + targetName;
     document.getElementById('xai-fsim').innerText = "...";
     document.getElementById('xai-tsim').innerText = "...";
-    document.getElementById('xai-text').innerHTML = '<div class="spinner" style="width:20px;height:20px;"></div> Đang mô phỏng tư duy AI...';
+    document.getElementById('xai-text').innerHTML = '<div style="display:flex;align-items:center;gap:10px;"><div class="ai-scanner" style="width:30px;height:30px;margin:0;"></div> <span>Đang mô phỏng tư duy AI...</span></div>';
     
     fetch('api/proxy.php?action=explain', {
         method: 'POST',
@@ -692,8 +692,8 @@ function render3DForceGraph(predictions, queryName, queryType) {
             .nodeLabel('name')
             .nodeVal('val')
             .linkWidth('value')
-            .linkColor(() => 'rgba(99, 102, 241, 0.4)')
-            .backgroundColor('rgba(10, 14, 23, 0)'); // transparent to blending background
+            .linkColor(() => 'rgba(14, 165, 233, 0.4)') /* Medical cyan color */
+            .backgroundColor('rgba(10, 15, 24, 0.1)'); // slight tint transparent
             
         // Resize graph on window resize
         window.addEventListener('resize', () => {
@@ -720,7 +720,7 @@ function toggle3DViewer() {
     
     wrapper.style.display = 'block';
     const container = document.getElementById('molecule-container');
-    container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Thực thể hóa học đang tải từ CSDL PubChem...</p></div>';
+    container.innerHTML = '<div class="loading"><div class="ai-scanner"></div><p>Đang tải mô hình cấu trúc 3D Hóa học...</p></div>';
     
     // Fetch CID from PubChem
     const cleanName = drugName.split('(')[0].trim(); // Remove brackets if any

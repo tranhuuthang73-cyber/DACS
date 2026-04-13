@@ -68,10 +68,18 @@ function adminTab(tab) {
 
 function loadDrugs(page) {
     page = page || 1;
+    page = page || 1;
     fetch(`api/admin.php?action=drugs&page=${page}`)
         .then(r => r.json())
         .then(data => {
-            let html = '<div class="table-container"><table><thead><tr><th>IDX</th><th>Drug ID</th><th>Tên</th><th>Actions</th></tr></thead><tbody>';
+            let html = `
+            <div style="margin-bottom: 1rem; display: flex; gap: 10px; align-items: center; background: var(--bg-card); padding: 1rem; border-radius: var(--radius); border: 1px solid var(--border);">
+                <span style="font-weight: bold; color: var(--accent-light);"><i class="fas fa-plus-circle"></i> Thêm mới:</span>
+                <input type="text" id="new-drug-id" class="form-input" placeholder="Mã thuốc (VD: DB00001)" style="flex: 1;">
+                <input type="text" id="new-drug-name" class="form-input" placeholder="Tên thuốc" style="flex: 2;">
+                <button class="btn btn-success" onclick="addDrug()"><i class="fas fa-plus"></i> Thêm</button>
+            </div>`;
+            html += '<div class="table-container"><table><thead><tr><th>IDX</th><th>Drug ID</th><th>Tên</th><th>Actions</th></tr></thead><tbody>';
             data.drugs.forEach(d => {
                 html += `<tr>
                     <td>${d.idx}</td><td>${d.drug_id}</td>
@@ -88,10 +96,18 @@ function loadDrugs(page) {
 
 function loadDiseases(page) {
     page = page || 1;
+    page = page || 1;
     fetch(`api/admin.php?action=diseases&page=${page}`)
         .then(r => r.json())
         .then(data => {
-            let html = '<div class="table-container"><table><thead><tr><th>IDX</th><th>Disease ID</th><th>Tên</th><th>Actions</th></tr></thead><tbody>';
+            let html = `
+            <div style="margin-bottom: 1rem; display: flex; gap: 10px; align-items: center; background: var(--bg-card); padding: 1rem; border-radius: var(--radius); border: 1px solid var(--border);">
+                <span style="font-weight: bold; color: var(--accent-light);"><i class="fas fa-plus-circle"></i> Thêm mới:</span>
+                <input type="text" id="new-disease-id" class="form-input" placeholder="Mã bệnh (VD: D00001)" style="flex: 1;">
+                <input type="text" id="new-disease-name" class="form-input" placeholder="Tên bệnh" style="flex: 2;">
+                <button class="btn btn-success" onclick="addDisease()"><i class="fas fa-plus"></i> Thêm</button>
+            </div>`;
+            html += '<div class="table-container"><table><thead><tr><th>IDX</th><th>Disease ID</th><th>Tên</th><th>Actions</th></tr></thead><tbody>';
             data.diseases.forEach(d => {
                 html += `<tr>
                     <td>${d.idx}</td><td>${d.disease_id}</td>
@@ -146,6 +162,38 @@ function saveDisease(id) {
     fetch('api/admin.php', { method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({action:'update_disease', id, name})
     }).then(r => r.json()).then(d => { if(d.success) alert('Đã lưu!'); });
+}
+
+function addDrug() {
+    const drug_id = document.getElementById('new-drug-id').value.trim();
+    const name = document.getElementById('new-drug-name').value.trim();
+    if (!drug_id || !name) return alert('Vui lòng nhập đủ mã thuốc và tên thuốc');
+    fetch('api/admin.php', { method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({action:'add_drug', drug_id, name})
+    }).then(r => r.json()).then(d => {
+        if(d.success) {
+            alert('Đã thêm thuốc thành công!');
+            loadDrugs();
+        } else {
+            alert('Lỗi: ' + (d.error || 'Mã thuốc có thể đã tồn tại.'));
+        }
+    });
+}
+
+function addDisease() {
+    const disease_id = document.getElementById('new-disease-id').value.trim();
+    const name = document.getElementById('new-disease-name').value.trim();
+    if (!disease_id || !name) return alert('Vui lòng nhập đủ mã bệnh và tên bệnh');
+    fetch('api/admin.php', { method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({action:'add_disease', disease_id, name})
+    }).then(r => r.json()).then(d => {
+        if(d.success) {
+            alert('Đã thêm bệnh thành công!');
+            loadDiseases();
+        } else {
+            alert('Lỗi: ' + (d.error || 'Mã bệnh có thể đã tồn tại.'));
+        }
+    });
 }
 
 function deleteDrug(id) {
