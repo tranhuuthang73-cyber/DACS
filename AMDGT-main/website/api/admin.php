@@ -44,6 +44,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             jsonResponse(['logs' => $logs]);
             break;
             
+        case 'stats':
+            $stats = [
+                'drugs' => (int)$db->query("SELECT COUNT(*) FROM drugs")->fetchColumn(),
+                'diseases' => (int)$db->query("SELECT COUNT(*) FROM diseases")->fetchColumn(),
+                'associations' => (int)$db->query("SELECT COUNT(*) FROM known_associations")->fetchColumn(),
+                'predictions' => (int)$db->query("SELECT COUNT(*) FROM predictions")->fetchColumn(),
+            ];
+            jsonResponse($stats);
+            break;
+            
         default:
             jsonResponse(['error' => 'Unknown action'], 400);
     }
@@ -99,6 +109,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
         case 'delete_disease':
             $stmt = $db->prepare("DELETE FROM diseases WHERE id = ?");
+            $stmt->execute([$input['id']]);
+            jsonResponse(['success' => true]);
+            break;
+            
+        case 'delete_log':
+            $stmt = $db->prepare("DELETE FROM predictions WHERE id = ?");
             $stmt->execute([$input['id']]);
             jsonResponse(['success' => true]);
             break;

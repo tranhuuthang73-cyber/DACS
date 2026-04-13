@@ -25,19 +25,19 @@ $stats = [
 
     <div class="stats-grid fade-in">
         <div class="stat-card">
-            <div class="stat-value"><?= $stats['drugs'] ?></div>
+            <div class="stat-value" id="stat-drugs"><?= $stats['drugs'] ?></div>
             <div class="stat-label"><i class="fas fa-pills"></i> Thuốc</div>
         </div>
         <div class="stat-card">
-            <div class="stat-value"><?= $stats['diseases'] ?></div>
+            <div class="stat-value" id="stat-diseases"><?= $stats['diseases'] ?></div>
             <div class="stat-label"><i class="fas fa-virus"></i> Bệnh</div>
         </div>
         <div class="stat-card">
-            <div class="stat-value"><?= $stats['associations'] ?></div>
+            <div class="stat-value" id="stat-associations"><?= $stats['associations'] ?></div>
             <div class="stat-label"><i class="fas fa-link"></i> Liên kết</div>
         </div>
         <div class="stat-card">
-            <div class="stat-value"><?= $stats['predictions'] ?></div>
+            <div class="stat-value" id="stat-predictions"><?= $stats['predictions'] ?></div>
             <div class="stat-label"><i class="fas fa-search"></i> Dự đoán</div>
         </div>
     </div>
@@ -53,8 +53,73 @@ $stats = [
     <div id="admin-content"></div>
 </div>
 
+<!-- Modal xem chi tiết -->
+<div id="detailsModal" class="modal-overlay" style="position: fixed; inset: 0; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; background: rgba(10, 14, 23, 0.85); backdrop-filter: blur(8px); z-index: 9999; opacity: 0; visibility: hidden; transition: all 0.3s ease;">
+    <div class="modal-content" style="max-height: 85vh; width: 90%; max-width: 700px; display: flex; flex-direction: column; overflow: hidden;">
+        
+        <!-- Modal Header -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 1rem; border-bottom: 1px solid var(--border); margin-bottom: 1rem;">
+            <div id="modalTitle" style="margin: 0; font-size: 1.2rem; font-weight: 600; display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;">
+                Chi tiết dự đoán
+            </div>
+            <button class="modal-close" onclick="closeModal()" style="position: static; margin-left: 15px; flex-shrink: 0;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Modal Body -->
+        <div style="flex: 1; overflow-y: auto; overflow-x: hidden;">
+            <div class="results-list" id="modalContent" style="margin-top: 0; padding-right: 8px;">
+                <!-- Chi tiết AJAX -->
+            </div>
+        </div>
+        
+    </div>
+</div>
+
+<!-- Modal xác nhận xóa (Custom - không bị trình duyệt chặn) -->
+<div id="confirmModal" style="position: fixed; inset: 0; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; background: rgba(10, 14, 23, 0.9); backdrop-filter: blur(8px); z-index: 99999; opacity: 0; visibility: hidden; transition: all 0.25s ease;">
+    <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 2rem; max-width: 420px; width: 90%; box-shadow: var(--shadow-lg); text-align: center; transform: scale(0.9); transition: transform 0.25s ease;" id="confirmBox">
+        <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+            <i class="fas fa-exclamation-triangle" style="font-size: 1.5rem; color: #ef4444;"></i>
+        </div>
+        <h3 style="margin: 0 0 0.5rem; color: var(--text-primary); font-size: 1.1rem;">Xác nhận xóa</h3>
+        <p id="confirmMessage" style="margin: 0 0 1.5rem; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5;">Bạn có chắc chắn muốn xóa lịch sử dự đoán này?<br>Hành động này không thể hoàn tác.</p>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button onclick="confirmCancel()" class="btn" style="padding: 10px 24px; background: var(--bg-section); color: var(--text-secondary); border: 1px solid var(--border); border-radius: var(--radius); font-size: 0.9rem; cursor: pointer;">
+                <i class="fas fa-times"></i> Hủy
+            </button>
+            <button onclick="confirmOk()" class="btn btn-danger" style="padding: 10px 24px; background: #ef4444; color: white; border: none; border-radius: var(--radius); font-size: 0.9rem; cursor: pointer;">
+                <i class="fas fa-trash"></i> Xóa
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Custom scrollbar for modal */
+#modalContent::-webkit-scrollbar { width: 6px; }
+#modalContent::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 10px; }
+#modalContent::-webkit-scrollbar-thumb { background: var(--accent-dark); border-radius: 10px; }
+#modalContent::-webkit-scrollbar-thumb:hover { background: var(--accent-light); }
+#confirmModal.show { opacity: 1; visibility: visible; }
+#confirmModal.show #confirmBox { transform: scale(1); }
+</style>
+
 <script>
 let currentPage = {drugs: 1, diseases: 1, assoc: 1};
+
+// === Live Stats Refresh ===
+function refreshStats() {
+    fetch('api/admin.php?action=stats&_t=' + Date.now())
+        .then(r => r.json())
+        .then(s => {
+            document.getElementById('stat-drugs').textContent = s.drugs;
+            document.getElementById('stat-diseases').textContent = s.diseases;
+            document.getElementById('stat-associations').textContent = s.associations;
+            document.getElementById('stat-predictions').textContent = s.predictions;
+        }).catch(() => {});
+}
 
 function adminTab(tab) {
     document.querySelectorAll('.tabs .tab').forEach((t, i) => {
@@ -138,12 +203,27 @@ function loadAssociations(page) {
 }
 
 function loadLogs() {
-    fetch('api/admin.php?action=logs')
+    fetch('api/admin.php?action=logs&_t=' + new Date().getTime(), { cache: 'no-store' })
         .then(r => r.json())
         .then(data => {
-            let html = '<div class="table-container"><table><thead><tr><th>User</th><th>Loại</th><th>Truy vấn</th><th>Thời gian</th></tr></thead><tbody>';
+            let html = '<div class="table-container"><table><thead><tr><th>User</th><th>Loại</th><th>Truy vấn</th><th>Kết quả</th><th>Thời gian</th><th>Thao tác</th></tr></thead><tbody>';
             data.logs.forEach(l => {
-                html += `<tr><td>${l.username}</td><td>${l.query_type}</td><td>${l.query_value}</td><td style="font-size:0.8rem">${l.created_at}</td></tr>`;
+                let resultsData = [];
+                try {
+                    resultsData = JSON.parse(l.results) || [];
+                } catch(e) {}
+                let count = resultsData.length;
+                let btnDetails = count > 0 ? `<button class="btn btn-sm btn-outline" style="margin-right: 5px;" onclick='viewDetails(${JSON.stringify(l.query_value)}, ${JSON.stringify(l.query_type)}, ${JSON.stringify(resultsData).replace(/'/g, "&apos;")})'><i class="fas fa-eye"></i> Chi tiết</button>` : '';
+                let btnDelete = `<button class="btn btn-sm btn-danger" onclick="deleteLog(event, '${l.id}')"><i class="fas fa-trash"></i></button>`;
+
+                html += `<tr>
+                <td>${l.username}</td>
+                <td><span style="color: ${l.query_type === 'drug_to_disease' ? 'var(--accent-light)' : 'var(--info)'};"><i class="fas ${l.query_type === 'drug_to_disease' ? 'fa-pills' : 'fa-virus'}"></i> ${l.query_type}</span></td>
+                <td><strong>${l.query_value}</strong></td>
+                <td>${count} kết quả</td>
+                <td style="font-size:0.8rem">${l.created_at}</td>
+                <td style="white-space: nowrap;">${btnDetails}${btnDelete}</td>
+                </tr>`;
             });
             html += '</tbody></table></div>';
             document.getElementById('admin-content').innerHTML = html;
@@ -154,14 +234,14 @@ function saveDrug(id) {
     const name = document.getElementById('dn-' + id).value;
     fetch('api/admin.php', { method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({action:'update_drug', id, name})
-    }).then(r => r.json()).then(d => { if(d.success) alert('Đã lưu!'); });
+    }).then(r => r.json()).then(d => { if(d.success) { loadDrugs(); refreshStats(); } });
 }
 
 function saveDisease(id) {
     const name = document.getElementById('din-' + id).value;
     fetch('api/admin.php', { method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({action:'update_disease', id, name})
-    }).then(r => r.json()).then(d => { if(d.success) alert('Đã lưu!'); });
+    }).then(r => r.json()).then(d => { if(d.success) { loadDiseases(); refreshStats(); } });
 }
 
 function addDrug() {
@@ -172,8 +252,8 @@ function addDrug() {
         body: JSON.stringify({action:'add_drug', drug_id, name})
     }).then(r => r.json()).then(d => {
         if(d.success) {
-            alert('Đã thêm thuốc thành công!');
             loadDrugs();
+            refreshStats();
         } else {
             alert('Lỗi: ' + (d.error || 'Mã thuốc có thể đã tồn tại.'));
         }
@@ -188,8 +268,8 @@ function addDisease() {
         body: JSON.stringify({action:'add_disease', disease_id, name})
     }).then(r => r.json()).then(d => {
         if(d.success) {
-            alert('Đã thêm bệnh thành công!');
             loadDiseases();
+            refreshStats();
         } else {
             alert('Lỗi: ' + (d.error || 'Mã bệnh có thể đã tồn tại.'));
         }
@@ -200,14 +280,66 @@ function deleteDrug(id) {
     if(!confirm('Xóa thuốc này?')) return;
     fetch('api/admin.php', { method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({action:'delete_drug', id})
-    }).then(r => r.json()).then(d => { if(d.success) loadDrugs(); });
+    }).then(r => r.json()).then(d => { if(d.success) { loadDrugs(); refreshStats(); } });
 }
 
 function deleteDisease(id) {
     if(!confirm('Xóa bệnh này?')) return;
     fetch('api/admin.php', { method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({action:'delete_disease', id})
-    }).then(r => r.json()).then(d => { if(d.success) loadDiseases(); });
+    }).then(r => r.json()).then(d => { if(d.success) { loadDiseases(); refreshStats(); } });
+}
+
+// === Custom Confirm Modal System ===
+let _confirmResolve = null;
+function showConfirm(message) {
+    return new Promise(resolve => {
+        _confirmResolve = resolve;
+        document.getElementById('confirmMessage').innerHTML = message;
+        const modal = document.getElementById('confirmModal');
+        const box = document.getElementById('confirmBox');
+        modal.style.opacity = '1';
+        modal.style.visibility = 'visible';
+        box.style.transform = 'scale(1)';
+    });
+}
+function confirmOk() {
+    const modal = document.getElementById('confirmModal');
+    const box = document.getElementById('confirmBox');
+    modal.style.opacity = '0';
+    box.style.transform = 'scale(0.9)';
+    setTimeout(() => { modal.style.visibility = 'hidden'; }, 250);
+    if (_confirmResolve) _confirmResolve(true);
+    _confirmResolve = null;
+}
+function confirmCancel() {
+    const modal = document.getElementById('confirmModal');
+    const box = document.getElementById('confirmBox');
+    modal.style.opacity = '0';
+    box.style.transform = 'scale(0.9)';
+    setTimeout(() => { modal.style.visibility = 'hidden'; }, 250);
+    if (_confirmResolve) _confirmResolve(false);
+    _confirmResolve = null;
+}
+
+function deleteLog(e, id) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    showConfirm('Bạn có chắc chắn muốn xóa lịch sử dự đoán này?<br>Hành động này <strong>không thể hoàn tác</strong>.').then(ok => {
+        if (!ok) return;
+        fetch('api/admin.php', { method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({action:'delete_log', id: parseInt(id)})
+        }).then(r => r.json()).then(d => { 
+            if(d.success) {
+                loadLogs();
+                refreshStats();
+            } else {
+                showConfirm('Có lỗi xảy ra khi xóa!');
+            }
+        }).catch(err => {
+            console.error(err);
+            showConfirm('Có lỗi mạng hoặc server!');
+        });
+    });
 }
 
 function renderPagination(total, current, perPage, fn) {
@@ -257,6 +389,109 @@ function renderPagination(total, current, perPage, fn) {
 
 // Load drugs by default
 adminTab('drugs');
+
+function viewDetails(queryValue, queryType, results) {
+    const title = document.getElementById('modalTitle');
+    const content = document.getElementById('modalContent');
+    const modal = document.getElementById('detailsModal');
+    
+    // Set title with modern styling
+    if (queryType === 'drug_to_disease') {
+        title.innerHTML = `
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(142, 45, 226, 0.2); color: var(--accent-light); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fas fa-pills"></i>
+            </div>
+            <div style="flex: 1;">
+                <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: normal; margin-bottom: 2px;">Dự đoán bệnh tiềm năng cho thuốc</div>
+                <div style="color: var(--text-primary); font-size: 1.1rem;">${queryValue}</div>
+            </div>
+            <div>
+                <a href="predict.php?q=${encodeURIComponent(queryValue)}&type=drug" class="btn btn-sm btn-primary" style="text-decoration:none;"><i class="fas fa-cube"></i> Tái tạo 3D VIP</a>
+            </div>`;
+    } else {
+        title.innerHTML = `
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(74, 0, 224, 0.2); color: var(--info); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fas fa-virus"></i>
+            </div>
+            <div style="flex: 1;">
+                <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: normal; margin-bottom: 2px;">Dự đoán thuốc điều trị cho bệnh</div>
+                <div style="color: var(--text-primary); font-size: 1.1rem;">${queryValue}</div>
+            </div>
+            <div>
+                <a href="predict.php?q=${encodeURIComponent(queryValue)}&type=disease" class="btn btn-sm btn-primary" style="text-decoration:none;"><i class="fas fa-cube"></i> Tái tạo 3D VIP</a>
+            </div>`;
+    }
+    
+    // Render kết quả sử dụng đúng CSS classes từ style.css
+    let html = '';
+    const type = queryType === 'drug_to_disease' ? 'disease' : 'drug';
+    
+    results.forEach(p => {
+        const name = type === 'disease' ? (p.disease_name || `Disease #${p.disease_idx}`) : (p.drug_name || `Drug #${p.drug_idx}`);
+        const id = type === 'disease' ? (p.disease_id || '') : (p.drug_id || '');
+        const scorePct = Math.min(p.score * 100, 100).toFixed(1);
+        const badge = p.is_known ? '<span class="result-badge badge-known">Đã biết</span>' : '<span class="result-badge badge-new" style="box-shadow: 0 0 10px var(--accent-glow);">Mới</span>';
+        
+        let scoreClass, valueClass, labelClass, labelText;
+        const score = p.score * 100;
+        if (score >= 70) {
+            scoreClass = 'score-high';
+            valueClass = 'value-high';
+            labelClass = 'label-high';
+            labelText = '✅ Hiệu quả cao';
+        } else if (score >= 40) {
+            scoreClass = 'score-medium';
+            valueClass = 'value-medium';
+            labelClass = 'label-medium';
+            labelText = '⚠️ Trung bình';
+        } else {
+            scoreClass = 'score-low';
+            valueClass = 'value-low';
+            labelClass = 'label-low';
+            labelText = '🔻 Thấp';
+        }
+
+        html += `
+            <div class="result-item fade-in">
+                <div class="result-rank">${p.rank}</div>
+                <div class="result-info">
+                    <div class="result-name" style="color: var(--accent); font-weight: 700;">${name}</div>
+                    <div class="result-id">${id}</div>
+                </div>
+                <div class="result-score">
+                    <div class="score-bar"><div class="score-fill ${scoreClass}" style="width: ${scorePct}%"></div></div>
+                    <div class="score-value ${valueClass}">${scorePct}%</div>
+                    <span class="score-label ${labelClass}">${labelText}</span>
+                </div>
+                ${badge}
+            </div>
+        `;
+    });
+    
+    content.innerHTML = html;
+    
+    // Animation mở modal
+    modal.style.visibility = 'visible';
+    modal.style.opacity = '1';
+    modal.classList.add('active');
+}
+
+function closeModal() {
+    const modal = document.getElementById('detailsModal');
+    modal.style.opacity = '0';
+    modal.classList.remove('active');
+    setTimeout(() => {
+        modal.style.visibility = 'hidden';
+    }, 300);
+}
+
+// Close modal khi click ra ngoài vùng xám
+window.onclick = function(event) {
+    const modal = document.getElementById('detailsModal');
+    if (event.target == modal) {
+        closeModal();
+    }
+}
 </script>
 
 <?php include 'includes/footer.php'; ?>

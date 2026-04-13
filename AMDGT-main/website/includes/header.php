@@ -13,10 +13,10 @@
     <!-- Theme Script to avoid FOUC (Flash of Unstyled Content) -->
     <script>
         const savedTheme = localStorage.getItem('amdgt-theme');
-        if (savedTheme === 'light') {
-            document.documentElement.classList.add('light-theme');
+        if (savedTheme === 'dark') {
+            document.documentElement.classList.add('dark-theme');
             // Support apply to body when document ready
-            document.addEventListener('DOMContentLoaded', () => { document.body.classList.add('light-theme'); });
+            document.addEventListener('DOMContentLoaded', () => { document.body.classList.add('dark-theme'); });
         }
     </script>
 </head>
@@ -31,6 +31,8 @@
                 <a href="index.php" class="nav-link"><i class="fas fa-home"></i> Trang chủ</a>
                 <a href="predict.php" class="nav-link"><i class="fas fa-search"></i> Dự đoán</a>
                 <?php if (isLoggedIn()): ?>
+                    <a href="dashboard.php" class="nav-link"><i class="fas fa-chart-bar"></i> Dashboard</a>
+                    <a href="batch.php" class="nav-link"><i class="fas fa-layer-group"></i> Batch</a>
                     <a href="history.php" class="nav-link"><i class="fas fa-history"></i> Lịch sử</a>
                 <?php endif; ?>
                 <?php if (isAdmin()): ?>
@@ -61,21 +63,25 @@
             const lightIcon = themeToggleBtn.querySelector('.light-icon');
             
             // Sync Icon state
-            if (body.classList.contains('light-theme')) {
+            if (body.classList.contains('dark-theme')) {
+                lightIcon.style.display = 'none';
+                darkIcon.style.display = 'inline-block';
+            } else {
                 darkIcon.style.display = 'none';
                 lightIcon.style.display = 'inline-block';
             }
             
             themeToggleBtn.addEventListener('click', () => {
-                body.classList.toggle('light-theme');
-                if (body.classList.contains('light-theme')) {
+                body.classList.toggle('dark-theme');
+                document.documentElement.classList.toggle('dark-theme');
+                if (body.classList.contains('dark-theme')) {
+                    localStorage.setItem('amdgt-theme', 'dark');
+                    lightIcon.style.display = 'none';
+                    darkIcon.style.display = 'inline-block';
+                } else {
                     localStorage.setItem('amdgt-theme', 'light');
                     darkIcon.style.display = 'none';
                     lightIcon.style.display = 'inline-block';
-                } else {
-                    localStorage.setItem('amdgt-theme', 'dark');
-                    darkIcon.style.display = 'inline-block';
-                    lightIcon.style.display = 'none';
                 }
             });
         });

@@ -72,25 +72,23 @@ $history = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </div>
 
 <!-- Modal xem chi tiết -->
-<div id="detailsModal" class="modal-backdrop" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(10, 15, 30, 0.8); backdrop-filter: blur(8px); opacity: 0; transition: opacity 0.3s ease;">
-    <div class="modal-content" style="background-color: var(--bg-card); margin: 5vh auto; border-radius: 16px; width: 90%; max-width: 700px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 40px rgba(0,0,0,0.5); transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+<div id="detailsModal" class="modal-overlay" style="position: fixed; inset: 0; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; background: rgba(10, 14, 23, 0.85); backdrop-filter: blur(8px); z-index: 9999; opacity: 0; visibility: hidden; transition: all 0.3s ease;">
+    <div class="modal-content" style="max-height: 85vh; width: 90%; max-width: 700px; display: flex; flex-direction: column; overflow: hidden;">
         
         <!-- Modal Header -->
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px 25px; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.2); border-top-left-radius: 16px; border-top-right-radius: 16px;">
-            <div id="modalTitle" style="margin: 0; font-size: 1.2rem; font-weight: 600; display: flex; align-items: center; gap: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 1rem; border-bottom: 1px solid var(--border); margin-bottom: 1rem;">
+            <div id="modalTitle" style="margin: 0; font-size: 1.2rem; font-weight: 600; display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;">
                 Chi tiết dự đoán
             </div>
-            <button onclick="closeModal()" style="background: rgba(255,255,255,0.1); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; font-size: 1.2rem;" onmouseover="this.style.background='rgba(255,60,60,0.8)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+            <button class="modal-close" onclick="closeModal()" style="position: static; margin-left: 15px; flex-shrink: 0;">
                 <i class="fas fa-times"></i>
             </button>
         </div>
 
         <!-- Modal Body -->
-        <div style="padding: 25px;">
-            <div class="card" style="margin: 0; box-shadow: none; border: 1px solid rgba(255,255,255,0.05);">
-                <div class="results-list" id="modalContent" style="max-height: 55vh; overflow-y: auto; padding-right: 5px;">
-                    <!-- Chi tiết AJAX -->
-                </div>
+        <div style="flex: 1; overflow-y: auto; overflow-x: hidden;">
+            <div class="results-list" id="modalContent" style="margin-top: 0; padding-right: 8px;">
+                <!-- Chi tiết AJAX -->
             </div>
         </div>
         
@@ -147,18 +145,38 @@ function viewDetails(queryValue, queryType, results) {
         const name = type === 'disease' ? (p.disease_name || `Disease #${p.disease_idx}`) : (p.drug_name || `Drug #${p.drug_idx}`);
         const id = type === 'disease' ? (p.disease_id || '') : (p.drug_id || '');
         const scorePct = Math.min(p.score * 100, 100).toFixed(1);
-        const badge = p.is_known ? '<span class="result-badge badge-known">Đã biết</span>' : '<span class="result-badge badge-new">Mới</span>';
+        const badge = p.is_known ? '<span class="result-badge badge-known">Đã biết</span>' : '<span class="result-badge badge-new" style="box-shadow: 0 0 10px var(--accent-glow);">Mới</span>';
         
+        let scoreClass, valueClass, labelClass, labelText;
+        const score = p.score * 100;
+        if (score >= 70) {
+            scoreClass = 'score-high';
+            valueClass = 'value-high';
+            labelClass = 'label-high';
+            labelText = '✅ Hiệu quả cao';
+        } else if (score >= 40) {
+            scoreClass = 'score-medium';
+            valueClass = 'value-medium';
+            labelClass = 'label-medium';
+            labelText = '⚠️ Trung bình';
+        } else {
+            scoreClass = 'score-low';
+            valueClass = 'value-low';
+            labelClass = 'label-low';
+            labelText = '🔻 Thấp';
+        }
+
         html += `
             <div class="result-item fade-in">
                 <div class="result-rank">${p.rank}</div>
                 <div class="result-info">
-                    <div class="result-name">${name}</div>
+                    <div class="result-name" style="color: var(--accent); font-weight: 700;">${name}</div>
                     <div class="result-id">${id}</div>
                 </div>
                 <div class="result-score">
-                    <div class="score-bar"><div class="score-fill" style="width: ${scorePct}%"></div></div>
-                    <div class="score-value">${scorePct}%</div>
+                    <div class="score-bar"><div class="score-fill ${scoreClass}" style="width: ${scorePct}%"></div></div>
+                    <div class="score-value ${valueClass}">${scorePct}%</div>
+                    <span class="score-label ${labelClass}">${labelText}</span>
                 </div>
                 ${badge}
             </div>
@@ -168,23 +186,18 @@ function viewDetails(queryValue, queryType, results) {
     content.innerHTML = html;
     
     // Animation mở modal
-    modal.style.display = 'block';
-    setTimeout(() => {
-        modal.style.opacity = '1';
-        modalBox.style.transform = 'translateY(0)';
-    }, 10);
+    modal.style.visibility = 'visible';
+    modal.style.opacity = '1';
+    modal.classList.add('active');
 }
 
 function closeModal() {
     const modal = document.getElementById('detailsModal');
-    const modalBox = modal.querySelector('.modal-content');
-    
     modal.style.opacity = '0';
-    modalBox.style.transform = 'translateY(-20px)';
-    
+    modal.classList.remove('active');
     setTimeout(() => {
-        modal.style.display = 'none';
-    }, 300); // 300ms match transition time
+        modal.style.visibility = 'hidden';
+    }, 300);
 }
 
 // Close modal khi click ra ngoài vùng xám

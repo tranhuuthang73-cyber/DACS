@@ -10,64 +10,64 @@ if (!isLoggedIn()) {
 }
 ?>
 
-<div class="predict-container fade-in">
-    <div class="predict-header">
-        <h1>🔬 Dự Đoán Liên Kết</h1>
-        <p class="section-subtitle">Chọn chế độ dự đoán và nhập thuốc hoặc bệnh cần tra cứu</p>
+<div class="predict-container fade-in" style="max-width: 700px; margin: 0 auto;">
+    <div class="predict-header" style="text-align: center; margin-bottom: 2rem;">
+        <h1 style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;"><i class="fas fa-microscope" style="color: var(--accent);"></i> Dự Đoán Liên Kết</h1>
+        <p class="section-subtitle" style="color: var(--text-muted);">Chọn chế độ phân tích mạng GNN và nhập dữ liệu vào ô dưới đây</p>
     </div>
 
-    <div class="tabs" id="mode-tabs">
+    <div class="tabs" id="mode-tabs" style="margin: 0 auto 1.5rem auto; display: flex; justify-content: center;">
         <button class="tab active" onclick="switchTab('drug')" id="tab-drug">
-            <i class="fas fa-pills"></i> Thuốc → Bệnh
+            <i class="fas fa-pills"></i> Từ Thuốc → Bệnh
         </button>
         <button class="tab" onclick="switchTab('disease')" id="tab-disease">
-            <i class="fas fa-virus"></i> Bệnh → Thuốc
+            <i class="fas fa-virus"></i> Từ Bệnh → Thuốc
         </button>
     </div>
 
     <!-- Drug to Disease -->
-    <div class="card" id="panel-drug">
-        <h3 style="margin-bottom: 1rem;">Nhập thuốc để tìm bệnh tiềm năng</h3>
+    <div class="card" id="panel-drug" style="box-shadow: var(--shadow-lg); padding: 2rem; border-radius: calc(var(--radius-lg) * 1.2);">
+        <h3 style="margin-bottom: 1.5rem; text-align: center; color: var(--text-primary); font-size: 1.2rem;">Khám phá Phổ Bệnh Lý từ Thuốc</h3>
         <div class="form-group" style="position: relative;">
-            <label class="form-label">Chọn thuốc</label>
+            <label class="form-label">Tên dược chất / Thuốc</label>
             <input type="text" class="form-input" id="drug-search" 
-                   placeholder="Gõ tên thuốc... (vd: Aspirin, Caffeine)" autocomplete="off">
+                   placeholder="Nhập tên thuốc (vd: Aspirin, Caffeine)..." autocomplete="off" style="padding: 14px 18px; font-size: 1rem;">
             <input type="hidden" id="drug-idx">
-            <div class="autocomplete-list" id="drug-autocomplete" style="display:none;"></div>
+            <div class="autocomplete-list" id="drug-autocomplete" style="display:none; z-index: 10;"></div>
         </div>
         <div class="form-group">
-            <label class="form-label">Số kết quả (Top-K)</label>
-            <select class="form-select" id="drug-topk">
-                <option value="5">Top 5</option>
-                <option value="10" selected>Top 10</option>
-                <option value="20">Top 20</option>
+            <label class="form-label">Số khoảng dự đoán (Top-K)</label>
+            <select class="form-select" id="drug-topk" style="padding: 14px 18px; font-size: 1rem;">
+                <option value="5">Top 5 kết quả</option>
+                <option value="10" selected>Top 10 kết quả</option>
+                <option value="20">Top 20 kết quả</option>
             </select>
         </div>
-        <button class="btn btn-primary" onclick="predictDrug()" id="btn-predict-drug">
-            <i class="fas fa-search"></i> Dự đoán
+        <button class="btn btn-primary" onclick="predictDrug()" id="btn-predict-drug" style="width: 100%; justify-content: center; padding: 14px; font-size: 1.05rem; margin-top: 1rem; border-radius: 12px;">
+            <i class="fas fa-bolt"></i> Phân Tích Bằng AI
         </button>
     </div>
 
     <!-- Disease to Drug -->
-    <div class="card" id="panel-disease" style="display:none;">
-        <h3 style="margin-bottom: 1rem;">Nhập bệnh để tìm thuốc tiềm năng</h3>
+    <div class="card" id="panel-disease" style="display:none; box-shadow: var(--shadow-lg); padding: 2rem; border-radius: calc(var(--radius-lg) * 1.2);">
+        <h3 style="margin-bottom: 1.5rem; text-align: center; color: var(--text-primary); font-size: 1.2rem;">Khám phá Thuốc Điều Trị từ Bệnh</h3>
         <div class="form-group" style="position: relative;">
-            <label class="form-label">Chọn bệnh</label>
+            <label class="form-label">Mã bệnh / Tên bệnh</label>
             <input type="text" class="form-input" id="disease-search" 
-                   placeholder="Gõ mã bệnh... (vd: D102100)" autocomplete="off">
+                   placeholder="Nhập mã bệnh hoặc tên (vd: DB00794)..." autocomplete="off" style="padding: 14px 18px; font-size: 1rem;">
             <input type="hidden" id="disease-idx">
-            <div class="autocomplete-list" id="disease-autocomplete" style="display:none;"></div>
+            <div class="autocomplete-list" id="disease-autocomplete" style="display:none; z-index: 10;"></div>
         </div>
         <div class="form-group">
-            <label class="form-label">Số kết quả (Top-K)</label>
-            <select class="form-select" id="disease-topk">
-                <option value="5">Top 5</option>
-                <option value="10" selected>Top 10</option>
-                <option value="20">Top 20</option>
+            <label class="form-label">Số khoảng dự đoán (Top-K)</label>
+            <select class="form-select" id="disease-topk" style="padding: 14px 18px; font-size: 1rem;">
+                <option value="5">Top 5 kết quả</option>
+                <option value="10" selected>Top 10 kết quả</option>
+                <option value="20">Top 20 kết quả</option>
             </select>
         </div>
-        <button class="btn btn-primary" onclick="predictDisease()" id="btn-predict-disease">
-            <i class="fas fa-search"></i> Dự đoán
+        <button class="btn btn-primary" onclick="predictDisease()" id="btn-predict-disease" style="width: 100%; justify-content: center; padding: 14px; font-size: 1.05rem; margin-top: 1rem; border-radius: 12px;">
+            <i class="fas fa-bolt"></i> Phân Tích Bằng AI
         </button>
     </div>
 
@@ -108,12 +108,21 @@ if (!isLoggedIn()) {
     </div>
 </div>
 
-<!-- XAI Modal -->
+<!-- Enhanced XAI Modal -->
 <div class="modal-overlay" id="xai-modal">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
         <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
-        <div class="xai-title"><i class="fas fa-brain"></i> Phân Tích Logic Của AI</div>
-        <div class="xai-target" id="xai-target-name" style="margin-bottom: 1.5rem; color: var(--text-secondary);"></div>
+        <div class="xai-title"><i class="fas fa-brain"></i> Explainable AI - Giải Thích Logic Dự Đoán</div>
+        <div class="xai-target" id="xai-target-name" style="margin-bottom: 1rem; color: var(--text-secondary);"></div>
+        
+        <!-- Confidence Score Bar -->
+        <div class="xai-section-title"><i class="fas fa-gauge-high"></i> Độ Tin Cậy (Confidence Score)</div>
+        <div class="xai-confidence-bar">
+            <div class="xai-confidence-fill" id="xai-conf-fill" style="width: 0%;">0%</div>
+        </div>
+        <div id="xai-conf-label" style="text-align: center; font-size: 0.85rem; font-weight: 700; margin-bottom: 1rem;"></div>
+        
+        <!-- Dual Stats -->
         <div class="xai-stats">
             <div class="xai-stat-box">
                 <div class="xai-stat-val" id="xai-fsim">0%</div>
@@ -124,8 +133,68 @@ if (!isLoggedIn()) {
                 <div style="font-size: 0.8rem; color: var(--text-muted)">Độ Trùng Khớp Topo (PH)</div>
             </div>
         </div>
-        <div style="padding: 1.2rem; background: rgba(99, 102, 241, 0.1); border-left: 4px solid var(--accent); border-radius: 4px; line-height: 1.6; font-size: 0.95rem;" id="xai-text">
+
+        <!-- Radar Chart -->
+        <div class="xai-section-title"><i class="fas fa-chart-radar"></i> Phân Tích Yếu Tố Chú Ý (Attention Factors)</div>
+        <div class="xai-radar-container">
+            <canvas id="xai-radar-chart"></canvas>
+        </div>
+        
+        <!-- Explanation Bullets -->
+        <div class="xai-section-title"><i class="fas fa-lightbulb"></i> Tại Sao AI Dự Đoán Kết Quả Này?</div>
+        <ul class="xai-bullets" id="xai-bullets">
+            <li><i class="fas fa-spinner fa-spin"></i> Đang phân tích...</li>
+        </ul>
+
+        <!-- Similar Drugs -->
+        <div class="xai-section-title"><i class="fas fa-pills"></i> Thuốc Tương Đồng (Cấu Trúc Hoá Học)</div>
+        <div class="xai-similar-list" id="xai-similar-drugs">
+            <span class="xai-similar-tag">Đang tải...</span>
+        </div>
+
+        <!-- Similar Diseases -->
+        <div class="xai-section-title"><i class="fas fa-virus"></i> Bệnh Tương Đồng (Feature Space)</div>
+        <div class="xai-similar-list" id="xai-similar-diseases">
+            <span class="xai-similar-tag">Đang tải...</span>
+        </div>
+
+        <!-- Summary Text -->
+        <div class="xai-section-title"><i class="fas fa-file-medical"></i> Tóm Tắt Phân Tích</div>
+        <div style="padding: 1.2rem; background: rgba(99, 102, 241, 0.1); border-left: 4px solid var(--accent); border-radius: 4px; line-height: 1.6; font-size: 0.92rem;" id="xai-text">
             Đang trích xuất tri thức từ mạng nơ-ron...
+        </div>
+
+        <!-- PubMed Evidence -->
+        <div class="xai-section-title"><i class="fas fa-book-medical"></i> Bằng Chứng Y Khoa (PubMed)</div>
+        <div class="pubmed-section" id="xai-pubmed">
+            <div class="pubmed-card"><div class="pubmed-title"><i class="fas fa-spinner fa-spin"></i> Đang tìm kiếm bài báo...</div></div>
+        </div>
+
+        <!-- 3D Molecular Viewer -->
+        <div class="xai-section-title"><i class="fas fa-atom"></i> Cấu Trúc Phân Tử 3D</div>
+        <div class="mol3d-container" id="mol3d-viewer">
+            <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);">
+                <i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i> Đang tải mô hình 3D...
+            </div>
+        </div>
+        <div class="mol3d-info" id="mol3d-info"></div>
+
+        <!-- Expert Validation -->
+        <div class="xai-section-title"><i class="fas fa-user-md"></i> Xác Nhận Chuyên Gia</div>
+        <div class="validation-actions" id="xai-validation">
+            <button class="btn-validate btn-validate-confirm" onclick="validateResult('confirm')">
+                <i class="fas fa-check-circle"></i> Xác nhận Lâm sàng
+            </button>
+            <button class="btn-validate btn-validate-report" onclick="validateResult('report')">
+                <i class="fas fa-flag"></i> Báo cáo Sai lệch
+            </button>
+        </div>
+
+        <!-- PDF Export -->
+        <div style="text-align: center; margin-top: 1.5rem;">
+            <button class="btn-pdf-export" onclick="exportXAIPDF()">
+                <i class="fas fa-file-pdf"></i> Xuất Báo Cáo PDF
+            </button>
         </div>
     </div>
 </div>
@@ -466,19 +535,40 @@ function renderResults(predictions, type, queryName, queryId) {
         const drugIdx = type === 'disease' ? queryId : p.drug_idx;
         const diseaseIdx = type === 'disease' ? p.disease_idx : queryId;
         
+        // === CONFIDENCE SCORE COLOR CODING ===
+        let scoreClass, valueClass, labelClass, labelText;
+        const score = p.score * 100;
+        if (score >= 70) {
+            scoreClass = 'score-high';
+            valueClass = 'value-high';
+            labelClass = 'label-high';
+            labelText = '✅ Hiệu quả cao';
+        } else if (score >= 40) {
+            scoreClass = 'score-medium';
+            valueClass = 'value-medium';
+            labelClass = 'label-medium';
+            labelText = '⚠️ Trung bình';
+        } else {
+            scoreClass = 'score-low';
+            valueClass = 'value-low';
+            labelClass = 'label-low';
+            labelText = '🔻 Thấp';
+        }
+        
         html += `
             <div class="result-item fade-in">
                 <div class="result-rank">${p.rank}</div>
                 <div class="result-info">
-                    <div class="result-name" style="color: var(--accent-light); font-weight: 700;">${name}</div>
+                    <div class="result-name" style="color: var(--accent); font-weight: 700;">${name}</div>
                     <div class="result-id">${id}</div>
                 </div>
                 <div class="result-score">
-                    <div class="score-bar"><div class="score-fill" style="width: ${scorePct}%"></div></div>
-                    <div class="score-value">${scorePct}%</div>
+                    <div class="score-bar"><div class="score-fill ${scoreClass}" style="width: ${scorePct}%"></div></div>
+                    <div class="score-value ${valueClass}">${scorePct}%</div>
+                    <span class="score-label ${labelClass}">${labelText}</span>
                 </div>
-                <button class="btn btn-sm btn-outline btn-glow" style="margin: 0 10px;" onclick="explainAI(${drugIdx}, ${diseaseIdx}, '${name}')">
-                    <i class="fas fa-brain"></i> Giải Thích
+                <button class="btn btn-sm btn-outline btn-glow" style="margin: 0 10px;" onclick="explainAI(${drugIdx}, ${diseaseIdx}, '${name.replace(/'/g, "\\'")}')"> 
+                    <i class="fas fa-brain"></i> XAI
                 </button>
                 ${badge}
             </div>
@@ -576,13 +666,21 @@ function renderLandscape(predictions) {
     });
 }
 
+let xaiRadarChart = null;
+
 function explainAI(drugIdx, diseaseIdx, targetName) {
     const modal = document.getElementById('xai-modal');
     modal.classList.add('active');
-    document.getElementById('xai-target-name').innerText = "Đối tượng phân tích: " + targetName;
+    document.getElementById('xai-target-name').innerText = "🔍 Phân tích: " + targetName;
     document.getElementById('xai-fsim').innerText = "...";
     document.getElementById('xai-tsim').innerText = "...";
-    document.getElementById('xai-text').innerHTML = '<div style="display:flex;align-items:center;gap:10px;"><div class="ai-scanner" style="width:30px;height:30px;margin:0;"></div> <span>Đang mô phỏng tư duy AI...</span></div>';
+    document.getElementById('xai-conf-fill').style.width = '0%';
+    document.getElementById('xai-conf-fill').textContent = '...'; 
+    document.getElementById('xai-conf-label').textContent = '';
+    document.getElementById('xai-bullets').innerHTML = '<li><i class="fas fa-spinner fa-spin"></i> Đang mô phỏng tư duy AI...</li>';
+    document.getElementById('xai-similar-drugs').innerHTML = '<span class="xai-similar-tag">⏳ Đang tìm...</span>';
+    document.getElementById('xai-similar-diseases').innerHTML = '<span class="xai-similar-tag">⏳ Đang tìm...</span>';
+    document.getElementById('xai-text').innerHTML = '<div style="display:flex;align-items:center;gap:10px;"><div class="ai-scanner" style="width:30px;height:30px;margin:0;"></div> <span>Đang trích xuất tri thức từ mạng nơ-ron đồ thị...</span></div>';
     
     fetch('api/proxy.php?action=explain', {
         method: 'POST',
@@ -591,18 +689,319 @@ function explainAI(drugIdx, diseaseIdx, targetName) {
     })
     .then(r => r.json())
     .then(data => {
-        if(data) {
-            document.getElementById('xai-fsim').innerText = (data.feature_similarity * 100).toFixed(1) + "%";
-            document.getElementById('xai-tsim').innerText = (data.topo_similarity * 100).toFixed(1) + "%";
-            document.getElementById('xai-text').innerHTML = data.explanation_text || "Không thể phân tích logic lúc này.";
+        if(!data) return;
+        
+        // === Dual Stats ===
+        document.getElementById('xai-fsim').innerText = (data.feature_similarity * 100).toFixed(1) + "%";
+        document.getElementById('xai-tsim').innerText = (data.topo_similarity * 100).toFixed(1) + "%";
+        
+        // === Confidence Bar ===
+        const confPct = data.confidence_percent || (data.probability * 100);
+        const confLevel = data.confidence_level || 'medium';
+        const confLabel = data.confidence_label || 'N/A';
+        const confFill = document.getElementById('xai-conf-fill');
+        setTimeout(() => {
+            confFill.style.width = confPct.toFixed(1) + '%';
+            confFill.textContent = confPct.toFixed(1) + '%';
+            confFill.className = 'xai-confidence-fill conf-' + confLevel;
+        }, 100);
+        
+        const confLabelEl = document.getElementById('xai-conf-label');
+        const levelColors = { high: '#10b981', medium: '#f59e0b', low: '#ef4444' };
+        const levelIcons = { high: '✅', medium: '⚠️', low: '🔻' };
+        confLabelEl.innerHTML = `<span style="color:${levelColors[confLevel]};">${levelIcons[confLevel]} ${confLabel} — ${confPct.toFixed(1)}%</span>`;
+        
+        // === Radar Chart ===
+        if (data.attention_factors) {
+            renderXAIRadar(data.attention_factors);
         }
+        
+        // === Explanation Bullets ===
+        if (data.explanation_bullets && data.explanation_bullets.length > 0) {
+            let bulletsHTML = '';
+            data.explanation_bullets.forEach(b => {
+                bulletsHTML += `<li><i class="fas ${b.icon}"></i> ${b.text}</li>`;
+            });
+            document.getElementById('xai-bullets').innerHTML = bulletsHTML;
+        }
+        
+        // === Similar Drugs ===
+        if (data.similar_drugs && data.similar_drugs.length > 0) {
+            const drugTags = data.similar_drugs.map(d => {
+                const simPct = (d.similarity * 100).toFixed(1);
+                const name = d.drug_name || `Drug #${d.drug_idx}`;
+                return `<span class="xai-similar-tag" title="${name} - Similarity: ${simPct}%">💊 ${name} (${simPct}%)</span>`;
+            }).join('');
+            document.getElementById('xai-similar-drugs').innerHTML = drugTags;
+        }
+        
+        // === Similar Diseases ===
+        if (data.similar_diseases && data.similar_diseases.length > 0) {
+            const disTags = data.similar_diseases.map(d => {
+                const simPct = (d.similarity * 100).toFixed(1);
+                const name = d.disease_name || `Disease #${d.disease_idx}`;
+                return `<span class="xai-similar-tag" title="${name} - Similarity: ${simPct}%">🦠 ${name} (${simPct}%)</span>`;
+            }).join('');
+            document.getElementById('xai-similar-diseases').innerHTML = disTags;
+        }
+        
+        // === Summary Text ===
+        document.getElementById('xai-text').innerHTML = data.explanation_text || "Không thể phân tích logic lúc này.";
+        
+        // === Set context for validation ===
+        currentXAI.drugIdx = drugIdx;
+        currentXAI.diseaseIdx = diseaseIdx;
+        currentXAI.drugName = targetName;
+        
+        // === Load PubMed Evidence (async) ===
+        loadPubMedEvidence(targetName, '');
+        
+        // === Load 3D Molecule (async) ===
+        load3DMolecule(targetName);
+        
+        // === Reset validation buttons ===
+        document.getElementById('xai-validation').innerHTML = `
+            <button class="btn-validate btn-validate-confirm" onclick="validateResult('confirm')">
+                <i class="fas fa-check-circle"></i> Xác nhận Lâm sàng
+            </button>
+            <button class="btn-validate btn-validate-report" onclick="validateResult('report')">
+                <i class="fas fa-flag"></i> Báo cáo Sai lệch
+            </button>
+        `;
     }).catch(e => {
-        document.getElementById('xai-text').innerHTML = "Lỗi kết nối AI Engine.";
+        document.getElementById('xai-text').innerHTML = "❌ Lỗi kết nối AI Engine: " + e.message;
+        document.getElementById('xai-bullets').innerHTML = '<li><i class="fas fa-exclamation-triangle"></i> Không thể tải dữ liệu giải thích.</li>';
+    });
+}
+
+function renderXAIRadar(factors) {
+    const ctx = document.getElementById('xai-radar-chart').getContext('2d');
+    if (xaiRadarChart) xaiRadarChart.destroy();
+    
+    xaiRadarChart = new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: ['Graph Attention', 'Topo Homology', 'Feature Embedding', 'Network Propagation'],
+            datasets: [{
+                label: 'AI Attention (%)',
+                data: [
+                    factors.graph_attention || 0,
+                    factors.topo_homology || 0,
+                    factors.feature_embedding || 0,
+                    factors.network_propagation || 0
+                ],
+                backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                borderColor: '#6366f1',
+                borderWidth: 2,
+                pointBackgroundColor: '#6366f1',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                r: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        color: '#64748b',
+                        backdropColor: 'transparent',
+                        font: { size: 10 }
+                    },
+                    grid: { color: 'rgba(148, 163, 184, 0.15)' },
+                    pointLabels: {
+                        color: '#94a3b8',
+                        font: { size: 11, weight: 600 }
+                    }
+                }
+            },
+            plugins: {
+                legend: { display: false }
+            },
+            animation: {
+                duration: 1000,
+                easing: 'easeOutQuart'
+            }
+        }
     });
 }
 
 function closeModal() {
     document.getElementById('xai-modal').classList.remove('active');
+    if (xaiRadarChart) {
+        xaiRadarChart.destroy();
+        xaiRadarChart = null;
+    }
+}
+
+// Current XAI context
+let currentXAI = { drugIdx: null, diseaseIdx: null, drugName: '', diseaseName: '' };
+
+// ===== PUBMED EVIDENCE =====
+function loadPubMedEvidence(drugName, diseaseName) {
+    const container = document.getElementById('xai-pubmed');
+    container.innerHTML = '<div class="pubmed-card"><div class="pubmed-title"><i class="fas fa-spinner fa-spin"></i> Đang tìm kiếm trên PubMed...</div></div>';
+    
+    const params = new URLSearchParams();
+    if (drugName) params.append('drug', drugName);
+    if (diseaseName) params.append('disease', diseaseName);
+    
+    fetch('api/pubmed.php?' + params.toString())
+        .then(r => r.json())
+        .then(data => {
+            if (data.articles && data.articles.length > 0) {
+                let html = `<div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem;">📚 Tìm thấy ${data.total} bài báo liên quan (hiển thị top ${data.articles.length})</div>`;
+                data.articles.forEach(a => {
+                    html += `<div class="pubmed-card">
+                        <div class="pubmed-title">${a.title}</div>
+                        <div class="pubmed-journal">${a.authors} — <em>${a.journal}</em> (${a.year})</div>
+                        <a href="${a.url}" target="_blank" class="pubmed-link"><i class="fas fa-external-link-alt"></i> Xem trên PubMed (PMID: ${a.pmid})</a>
+                    </div>`;
+                });
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = '<div class="pubmed-card"><div class="pubmed-title" style="color:var(--text-muted);">Không tìm thấy bài báo liên quan trên PubMed.</div></div>';
+            }
+        })
+        .catch(() => {
+            container.innerHTML = '<div class="pubmed-card"><div class="pubmed-title" style="color:#ef4444;">⚠️ Không thể kết nối PubMed.</div></div>';
+        });
+}
+
+// ===== 3D MOLECULAR VIEWER =====
+function load3DMolecule(drugName) {
+    const viewer = document.getElementById('mol3d-viewer');
+    const info = document.getElementById('mol3d-info');
+    
+    // Try PubChem API to get compound info
+    const cleanName = drugName.replace(/[^a-zA-Z0-9 ]/g, '').trim();
+    if (!cleanName) {
+        viewer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);">Không có dữ liệu phân tử.</div>';
+        return;
+    }
+
+    fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(cleanName)}/JSON`)
+        .then(r => r.json())
+        .then(data => {
+            const compound = data?.PC_Compounds?.[0];
+            if (!compound) throw new Error('Not found');
+            
+            const cid = compound.id?.id?.cid;
+            const mw = compound.props?.find(p => p.urn?.label === 'Molecular Weight')?.value?.sval || 'N/A';
+            const formula = compound.props?.find(p => p.urn?.label === 'Molecular Formula')?.value?.sval || 'N/A';
+            const iupac = compound.props?.find(p => p.urn?.label === 'IUPAC Name' && p.urn?.name === 'Preferred')?.value?.sval || cleanName;
+            const smiles = compound.props?.find(p => p.urn?.label === 'SMILES' && p.urn?.name === 'Canonical')?.value?.sval || 'N/A';
+            
+            // Show 2D/3D image from PubChem
+            viewer.innerHTML = `
+                <div style="position:relative;width:100%;height:100%;background:#0a0a1a;">
+                    <img src="https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${cid}/PNG?image_size=large" 
+                         style="width:100%;height:100%;object-fit:contain;padding:1rem;" 
+                         alt="Molecular structure of ${cleanName}"
+                         onerror="this.parentElement.innerHTML='<div style=\\'display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);\\'>Không tải được hình ảnh phân tử.</div>'">
+                    <div class="mol3d-controls">
+                        <a href="https://pubchem.ncbi.nlm.nih.gov/compound/${cid}#section=3D-Conformer" target="_blank" 
+                           style="padding:6px 12px;border-radius:6px;background:var(--accent);color:#fff;text-decoration:none;font-size:0.8rem;">
+                            <i class="fas fa-cube"></i> Xem 3D trên PubChem
+                        </a>
+                    </div>
+                </div>`;
+            
+            // Info cards
+            info.innerHTML = `
+                <div class="mol3d-info-item"><span class="info-label">CID</span><span class="info-value">${cid}</span></div>
+                <div class="mol3d-info-item"><span class="info-label">Công thức</span><span class="info-value">${formula}</span></div>
+                <div class="mol3d-info-item"><span class="info-label">Khối lượng phân tử</span><span class="info-value">${mw}</span></div>
+                <div class="mol3d-info-item"><span class="info-label">IUPAC</span><span class="info-value" style="font-size:0.75rem;">${iupac.substring(0, 50)}${iupac.length > 50 ? '...' : ''}</span></div>
+                <div class="mol3d-info-item" style="grid-column:1/-1;"><span class="info-label">SMILES</span><span class="info-value" style="font-size:0.7rem;word-break:break-all;">${smiles}</span></div>
+            `;
+        })
+        .catch(() => {
+            viewer.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-muted);gap:0.5rem;">
+                <i class="fas fa-atom" style="font-size:2rem;opacity:0.3;"></i>
+                <span>Không tìm thấy dữ liệu phân tử cho "${cleanName}" trên PubChem.</span>
+            </div>`;
+            info.innerHTML = '';
+        });
+}
+
+// ===== EXPERT VALIDATION =====
+function validateResult(type) {
+    if (!currentXAI.drugIdx && currentXAI.drugIdx !== 0) return;
+    
+    fetch('api/proxy.php?action=validate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            drug_idx: currentXAI.drugIdx,
+            disease_idx: currentXAI.diseaseIdx,
+            validation: type,
+            note: ''
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        const el = document.getElementById('xai-validation');
+        if (data.success) {
+            if (type === 'confirm') {
+                el.innerHTML = '<span class="validation-badge vbadge-confirmed"><i class="fas fa-check-circle"></i> ✅ Đã xác nhận lâm sàng thành công!</span>';
+            } else {
+                el.innerHTML = '<span class="validation-badge vbadge-reported"><i class="fas fa-flag"></i> 🚩 Đã báo cáo sai lệch. Cảm ơn phản hồi!</span>';
+            }
+        } else {
+            el.innerHTML = '<span style="color:#ef4444;">⚠️ ' + (data.error || 'Lỗi') + '</span>';
+        }
+    })
+    .catch(() => {
+        document.getElementById('xai-validation').innerHTML = '<span style="color:#ef4444;">⚠️ Lỗi kết nối server</span>';
+    });
+}
+
+// ===== PDF EXPORT =====
+function exportXAIPDF() {
+    const modalContent = document.querySelector('#xai-modal .modal-content');
+    // Hide buttons before print
+    const btns = modalContent.querySelectorAll('.btn-validate, .btn-pdf-export, .modal-close');
+    btns.forEach(b => b.style.display = 'none');
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html><head><title>Báo Cáo XAI - AMDGT</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+        <style>
+            body { font-family: 'Inter', sans-serif; padding: 2rem; color: #1e293b; background: #fff; }
+            h1 { color: #6366f1; font-size: 1.5rem; border-bottom: 2px solid #6366f1; padding-bottom: 0.5rem; }
+            .header { text-align: center; margin-bottom: 2rem; }
+            .header img { height: 40px; }
+            .header h2 { color: #6366f1; }
+            .content { max-width: 700px; margin: 0 auto; }
+            table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+            td, th { padding: 8px 12px; border: 1px solid #e2e8f0; text-align: left; }
+            th { background: #f1f5f9; color: #64748b; font-size: 0.85rem; }
+            .footer { text-align: center; margin-top: 2rem; font-size: 0.8rem; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 1rem; }
+            @media print { body { padding: 0.5rem; } }
+        </style></head><body>
+        <div class="header">
+            <h2>🧬 AMDGT - Báo Cáo Phân Tích AI</h2>
+            <p style="color:#64748b;">Drug-Disease Association Prediction Report</p>
+            <p style="color:#94a3b8;font-size:0.85rem;">Ngày xuất: ${new Date().toLocaleDateString('vi-VN')} ${new Date().toLocaleTimeString('vi-VN')}</p>
+        </div>
+        <div class="content">${modalContent.innerHTML}</div>
+        <div class="footer">
+            <p>Hệ thống AMDGT - Attention-aware Multi-modal Network Topology</p>
+            <p>⚠️ Đây là kết quả dự đoán từ AI, không thay thế ý kiến bác sĩ chuyên khoa.</p>
+        </div>
+        </body></html>
+    `);
+    printWindow.document.close();
+    
+    // Restore buttons
+    btns.forEach(b => b.style.display = '');
+    
+    setTimeout(() => { printWindow.print(); }, 500);
 }
 
 // ======================= VIP AI ECOSYSTEM FEATURES =======================
