@@ -96,6 +96,79 @@ if ($type === 'drug_to_disease') {
     
     jsonResponse(['predictions' => $predictions, 'proteins' => $proteins, 'query_name' => $queryName]);
     
+} elseif ($type === 'protein_to_any') {
+    $proteinIdx = $input['protein_idx'] ?? null;
+    if ($proteinIdx === null) jsonResponse(['error' => 'Thiếu protein_idx'], 400);
+    
+    $stmt = $db->prepare("SELECT * FROM proteins WHERE dataset = ? AND idx = ?");
+    $stmt->execute([$dataset, $proteinIdx]);
+    $protein = $stmt->fetch(PDO::FETCH_ASSOC);
+    $queryName = $protein ? $protein['name'] : "Protein #$proteinIdx";
+    
+    $aiResult = callAI('/predict/protein', ['dataset' => $dataset, 'protein_idx' => (int)$proteinIdx, 'top_k' => (int)$topK]);
+    
+    if (isset($aiResult['error'])) {
+        jsonResponse(['error' => $aiResult['error']], 500);
+    }
+    
+    $mediated = $aiResult['mediated_predictions'] ?? [];
+    foreach ($mediated as &$m) {
+        $stmt = $db->prepare("SELECT name FROM drugs WHERE dataset = ? AND idx = ?");
+        $stmt->execute([$dataset, $m['drug_idx']]);
+        $m['drug_name'] = $stmt->fetchColumn() ?: "Drug #".$m['drug_idx'];
+        
+        $stmt = $db->prepare("SELECT name FROM diseases WHERE dataset = ? AND idx = ?");
+        $stmt->execute([$dataset, $m['disease_idx']]);
+        $m['disease_name'] = $stmt->fetchColumn() ?: "Disease #".$m['disease_idx'];
+    }
+    
+    $stmt = $db->prepare("INSERT INTO predictions (user_id, dataset, query_type, query_value, results) VALUES (?, ?, ?, ?, ?)");
+    $stmt->execute([$_SESSION['user_id'], $dataset, 'protein_to_any', $queryName, json_encode($mediated)]);
+    
+    jsonResponse(['mediated_predictions' => $mediated, 'query_name' => $queryName]);
+    
+} elseif ($type === 'triplet') {
+    $drugIdx = $input['drug_idx'] ?? null;
+    $proteinIdx = $input['protein_idx'] ?? null;
+    $diseaseIdx = $input['disease_idx'] ?? null;
+    
+    if ($drugIdx === null || $proteinIdx === null || $diseaseIdx === null) {
+        jsonResponse(['error' => 'Thiếu thông tin cho tổ hợp 3'], 400);
+    }
+    
+    // Get names for results
+    $stmt = $db->prepare("SELECT name FROM drugs WHERE dataset = ? AND idx = ?");
+    $stmt->execute([$dataset, $drugIdx]);
+    $drugName = $stmt->fetchColumn() ?: "Drug #$drugIdx";
+    
+    $stmt = $db->prepare("SELECT name FROM proteins WHERE dataset = ? AND idx = ?");
+    $stmt->execute([$dataset, $proteinIdx]);
+    $proteinName = $stmt->fetchColumn() ?: "Protein #$proteinIdx";
+    
+    $stmt = $db->prepare("SELECT name FROM diseases WHERE dataset = ? AND idx = ?");
+    $stmt->execute([$dataset, $diseaseIdx]);
+    $diseaseName = $stmt->fetchColumn() ?: "Disease #$diseaseIdx";
+    
+    $aiResult = callAI('/predict/triplet', [
+        'dataset' => $dataset,
+        'drug_idx' => (int)$drugIdx,
+        'protein_idx' => (int)$proteinIdx,
+        'disease_idx' => (int)$diseaseIdx
+    ]);
+    
+    if (isset($aiResult['error'])) {
+        jsonResponse(['error' => $aiResult['error']], 500);
+    }
+    
+    $aiResult['drug_name'] = $drugName;
+    $aiResult['protein_name'] = $proteinName;
+    $aiResult['disease_name'] = $diseaseName;
+    
+    $stmt = $db->prepare("INSERT INTO predictions (user_id, dataset, query_type, query_value, results) VALUES (?, ?, ?, ?, ?)");
+    $stmt->execute([$_SESSION['user_id'], $dataset, 'triplet', "$drugName-$proteinName-$diseaseName", json_encode($aiResult)]);
+    
+    jsonResponse($aiResult);
+    
 } else {
     jsonResponse(['error' => 'type không hợp lệ'], 400);
 }

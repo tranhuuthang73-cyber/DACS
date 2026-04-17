@@ -593,6 +593,47 @@ def explain():
     })
 
 
+@app.route('/predict/triplet', methods=['POST'])
+def predict_triplet():
+    data_in = request.get_json()
+    dataset = data_in.get('dataset', 'C-dataset')
+    drug_idx = data_in.get('drug_idx')
+    protein_idx = data_in.get('protein_idx')
+    disease_idx = data_in.get('disease_idx')
+    
+    ds = loaded_datasets.get(dataset)
+    if not ds: return jsonify({'error': f'Dataset {dataset} not found'}), 400
+    
+    # 1. Prediction Score (Drug-Disease)
+    probs = predict_scores(dataset, [[drug_idx, disease_idx]])
+    dd_score = float(probs[0])
+    
+    # 2. Known Links
+    has_dp = False
+    if ds['dp_matrix'] is not None and drug_idx < len(ds['dp_matrix']):
+        has_dp = int(ds['dp_matrix'][drug_idx, protein_idx]) == 1
+        
+    has_pd = False
+    if ds['pd_matrix'] is not None and protein_idx < len(ds['pd_matrix']):
+        has_pd = int(ds['pd_matrix'][protein_idx, disease_idx]) == 1
+
+    # 3. Triple Score (A heuristic for triplet alignment)
+    # If the protein is a known bridge, we boost the interpretation
+    triplet_confidence = dd_score
+    if has_dp and has_pd:
+        triplet_confidence = 0.5 + (dd_score * 0.49) # Weighted boost for known path
+    
+    return jsonify({
+        'drug_idx': drug_idx,
+        'protein_idx': protein_idx,
+        'disease_idx': disease_idx,
+        'dd_score': dd_score,
+        'has_dp': has_dp,
+        'has_pd': has_pd,
+        'triplet_confidence': triplet_confidence
+    })
+
+
 if __name__ == '__main__':
     load_model()
     print("[AI] AMDGT AI Server running on http://localhost:5001")

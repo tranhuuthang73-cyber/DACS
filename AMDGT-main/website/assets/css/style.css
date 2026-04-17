@@ -1626,6 +1626,78 @@ tr:hover td {
     }
 }
 
+/* Prediction 3-Column Grid */
+.predict-container .predict-grid-container {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+    width: 100% !important;
+}
+
+@media (max-width: 1200px) {
+    .predict-container .predict-grid-container {
+        gap: 1.2rem;
+    }
+}
+
+@media (max-width: 900px) {
+    .predict-grid-container {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+.predict-col-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 1.5rem;
+    transition: var(--transition);
+    display: flex;
+    flex-direction: column;
+    min-width: 0; /* Fix grid overflow */
+    height: 100%;
+}
+
+.predict-col-card:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-xl);
+}
+
+.predict-col-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 1.2rem;
+    text-align: center;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+/* Significance Gauges */
+.gauge-container {
+    margin: 1rem 0;
+}
+.gauge-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    margin-bottom: 4px;
+    color: var(--text-secondary);
+}
+.gauge-bar {
+    height: 8px;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+    overflow: hidden;
+}
+.gauge-fill {
+    height: 100%;
+    transition: width 1s cubic-bezier(0.17, 0.67, 0.83, 0.67);
+}
+
 /* ============================================
    DASHBOARD STYLES
    ============================================ */
@@ -1911,3 +1983,88 @@ tr:hover td {
     margin-right: 5px;
 }
 .btn-learn:hover { background: #10b981; color: #fff; }
+
+/* ============ ALPHABET FILTER (A-Z Browse) ============ */
+.alphabet-filter {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.alpha-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.alpha-label i {
+    font-size: 0.65rem;
+    opacity: 0.7;
+}
+
+.alpha-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+}
+
+.alpha-btn {
+    width: 26px;
+    height: 26px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-secondary);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.65rem;
+    font-weight: 700;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    padding: 0;
+}
+
+.alpha-btn:hover {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: var(--accent);
+    color: var(--accent-light);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+}
+
+.alpha-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    box-shadow: 0 2px 12px rgba(99, 102, 241, 0.4);
+    transform: translateY(-1px);
+}
+
+.alpha-btn.alpha-clear {
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.25);
+    color: #ef4444;
+    width: 26px;
+}
+
+.alpha-btn.alpha-clear:hover {
+    background: #ef4444;
+    color: #fff;
+    border-color: #ef4444;
+}
+
+/* Responsive: hide numbers row on very small cards */
+@media (max-width: 480px) {
+    .alpha-btn {
+        width: 22px;
+        height: 22px;
+        font-size: 0.6rem;
+    }
+}
