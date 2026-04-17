@@ -1,0 +1,8 @@
+Metric,Value,Best_Epoch
+Final AUC,0.4867284288146979,29
+Final AUPR,0.47815817515378944,29
+Final Accuracy,0.5,29
+Final Precision,0.0,29
+Final Recall,0.0,29
+Final F1,0.0,29
+Final MCC,0.0,29

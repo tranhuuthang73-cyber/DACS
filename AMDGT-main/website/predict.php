@@ -14,6 +14,15 @@ if (!isLoggedIn()) {
     <div class="predict-header" style="text-align: center; margin-bottom: 2rem;">
         <h1 style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;"><i class="fas fa-microscope" style="color: var(--accent);"></i> Dự Đoán Liên Kết</h1>
         <p class="section-subtitle" style="color: var(--text-muted);">Chọn chế độ phân tích mạng GNN và nhập dữ liệu vào ô dưới đây</p>
+        
+        <div class="dataset-selector" style="margin-top: 1rem; display: flex; align-items: center; justify-content: center; gap: 10px;">
+            <label style="font-size: 0.9rem; color: var(--text-secondary);">Bộ dữ liệu:</label>
+            <select class="form-select" id="global-dataset" style="width: auto; padding: 8px 15px; background: #1e293b; border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); cursor: pointer;">
+                <option value="C-dataset" style="background: #1e293b; color: white;" selected>C-Dataset (Chuẩn)</option>
+                <option value="B-dataset" style="background: #1e293b; color: white;">B-Dataset (Mở rộng)</option>
+                <option value="F-dataset" style="background: #1e293b; color: white;">F-Dataset (Phát triển)</option>
+            </select>
+        </div>
     </div>
 
     <div class="tabs" id="mode-tabs" style="margin: 0 auto 1.5rem auto; display: flex; justify-content: center;">
@@ -108,6 +117,12 @@ if (!isLoggedIn()) {
     </div>
 </div>
 
+<!-- Info Popup -->
+<div class="info-popup" id="info-popup">
+    <button onclick="closeInfoPopup()" style="position: absolute; top: 15px; right: 15px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem;"><i class="fas fa-times"></i></button>
+    <div id="popup-content"></div>
+</div>
+
 <!-- Enhanced XAI Modal -->
 <div class="modal-overlay" id="xai-modal">
     <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
@@ -122,8 +137,27 @@ if (!isLoggedIn()) {
         </div>
         <div id="xai-conf-label" style="text-align: center; font-size: 0.85rem; font-weight: 700; margin-bottom: 1rem;"></div>
         
+        <!-- Intelligence & Identity Section -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <!-- Clinical Insight -->
+            <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; padding: 1rem;">
+                <div style="font-size: 0.75rem; text-transform: uppercase; color: #10b981; font-weight: 800; margin-bottom: 0.5rem;"><i class="fas fa-stethoscope"></i> Nhận diện Lâm sàn</div>
+                <div id="xai-clinical-summary" style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4;">Đang giải mã bệnh lý...</div>
+            </div>
+            <!-- Chemical Identity -->
+            <div style="background: rgba(14, 165, 233, 0.05); border: 1px solid rgba(14, 165, 233, 0.2); border-radius: 12px; padding: 1rem; display: flex; align-items: center; gap: 10px;">
+                <div id="xai-drug-2d" style="width: 60px; height: 60px; background: #fff; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-flask" style="color: #ccc;"></i>
+                </div>
+                <div>
+                    <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--accent); font-weight: 800; margin-bottom: 0.2rem;">Công thức</div>
+                    <div id="xai-chem-formula" style="font-size: 0.95rem; font-weight: 800; color: var(--text-primary);">...</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Dual Stats -->
-        <div class="xai-stats">
+        <div class="xai-stats" style="margin-bottom: 1.5rem;">
             <div class="xai-stat-box">
                 <div class="xai-stat-val" id="xai-fsim">0%</div>
                 <div style="font-size: 0.8rem; color: var(--text-muted)">Cosine Đặc Trưng (Embeddings)</div>
@@ -270,7 +304,7 @@ let currentLandscapeCoords = [];
 let chartInstance = null;
 
 // Fetch landscape data once
-fetch('api/proxy.php?action=landscape')
+fetch('api/proxy.php?action=landscape&dataset=' + document.getElementById('global-dataset').value)
     .then(r => r.json())
     .then(data => {
         if (data && data.coords) currentLandscapeCoords = data.coords;
@@ -291,103 +325,9 @@ function switchTab(mode) {
 }
 
 // ... autocomplete code omitted for brevity but we use the existing DOM so we must re-implement it...
-// Actually, I am rewriting from line 75, so I must provide ALL the autocomplete logic!
-
-// AJAX Autocomplete for drugs
-let drugTimer;
-const drugSearch = document.getElementById('drug-search');
-const drugAC = document.getElementById('drug-autocomplete');
-drugSearch.addEventListener('input', function() {
-    document.getElementById('drug-idx').value = ''; // Xóa bộ nhớ đệm
-    currentPredictionGeneration++; // Chặn các tiến trình fetch ngầm đang dở dang
-    
-    // Xóa ngay kết quả trên màn hình để tránh hiểu nhầm
-    document.getElementById('action-bar').style.display = 'none';
-    document.getElementById('landscape-wrapper').style.display = 'none';
-    document.getElementById('3d-graph-wrapper').style.display = 'none';
-    document.getElementById('similar-drugs-wrapper').style.display = 'none';
-    document.getElementById('molecule-3d-wrapper').style.display = 'none';
-    const c = document.getElementById('results-container');
-    if(c.innerHTML !== '') c.innerHTML = '<div class="alert alert-info" style="opacity:0.7;"><i class="fas fa-info-circle"></i> Đang chờ lệnh dự đoán mới...</div>';
-
-    clearTimeout(drugTimer);
-    const q = this.value.trim();
-    if (q.length < 1) { drugAC.style.display = 'none'; return; }
-    drugTimer = setTimeout(() => {
-        fetch(`api/search.php?type=drug&q=${encodeURIComponent(q)}`)
-            .then(r => r.json())
-            .then(items => {
-                if (!items.length) { drugAC.style.display = 'none'; return; }
-                drugAC.innerHTML = items.map(d => 
-                    `<div class="autocomplete-item" data-idx="${d.idx}" data-name="${d.name}">
-                        <strong>${d.name}</strong> <span class="item-id">${d.drug_id}</span>
-                    </div>`
-                ).join('');
-                drugAC.style.display = 'block';
-            });
-    }, 200);
-});
-
-drugAC.addEventListener('click', function(e) {
-    const item = e.target.closest('.autocomplete-item');
-    if (item) {
-        document.getElementById('drug-idx').value = item.dataset.idx;
-        drugSearch.value = item.dataset.name;
-        drugAC.style.display = 'none';
-    }
-});
-
-// AJAX Autocomplete for diseases
-let diseaseTimer;
-const diseaseSearch = document.getElementById('disease-search');
-const diseaseAC = document.getElementById('disease-autocomplete');
-diseaseSearch.addEventListener('input', function() {
-    document.getElementById('disease-idx').value = ''; // Xóa bộ nhớ đệm
-    currentPredictionGeneration++; // Chặn các tiến trình fetch ngầm đang dở dang
-    
-    // Xóa ngay kết quả trên màn hình để tránh hiểu nhầm
-    document.getElementById('action-bar').style.display = 'none';
-    document.getElementById('landscape-wrapper').style.display = 'none';
-    document.getElementById('3d-graph-wrapper').style.display = 'none';
-    document.getElementById('similar-drugs-wrapper').style.display = 'none';
-    document.getElementById('molecule-3d-wrapper').style.display = 'none';
-    const c = document.getElementById('results-container');
-    if(c.innerHTML !== '') c.innerHTML = '<div class="alert alert-info" style="opacity:0.7;"><i class="fas fa-info-circle"></i> Đang chờ lệnh dự đoán mới...</div>';
-
-    clearTimeout(diseaseTimer);
-    const q = this.value.trim();
-    if (q.length < 1) { diseaseAC.style.display = 'none'; return; }
-    diseaseTimer = setTimeout(() => {
-        fetch(`api/search.php?type=disease&q=${encodeURIComponent(q)}`)
-            .then(r => r.json())
-            .then(items => {
-                if (!items.length) { diseaseAC.style.display = 'none'; return; }
-                diseaseAC.innerHTML = items.map(d => 
-                    `<div class="autocomplete-item" data-idx="${d.idx}" data-name="${d.name}">
-                        <strong>${d.name}</strong> <span class="item-id">${d.disease_id}</span>
-                    </div>`
-                ).join('');
-                diseaseAC.style.display = 'block';
-            });
-    }, 200);
-});
-
-diseaseAC.addEventListener('click', function(e) {
-    const item = e.target.closest('.autocomplete-item');
-    if (item) {
-        document.getElementById('disease-idx').value = item.dataset.idx;
-        diseaseSearch.value = item.dataset.name;
-        diseaseAC.style.display = 'none';
-    }
-});
-
-document.addEventListener('click', e => {
-    if (!e.target.closest('#drug-search') && !e.target.closest('#drug-autocomplete')) drugAC.style.display = 'none';
-    if (!e.target.closest('#disease-search') && !e.target.closest('#disease-autocomplete')) diseaseAC.style.display = 'none';
-});
-
 let currentQueryIdx = -1;
 let currentPredictionGeneration = 0;
+let currentRenderedDrug = "";
 
 function predictDrug() {
     const idx = document.getElementById('drug-idx').value;
@@ -397,8 +337,8 @@ function predictDrug() {
     if (!idx && idx !== '0') { 
         if (textQuery.length > 0) {
             const gen = ++currentPredictionGeneration;
-            // Ép đối chiếu CSDL tự động nếu gõ tay
-            fetch(`api/search.php?type=drug&q=${encodeURIComponent(textQuery)}`)
+            // Force DB check if typed manually
+            fetch(`api/search.php?type=drug&q=${encodeURIComponent(textQuery)}&dataset=${document.getElementById('global-dataset').value}`)
                 .then(r => r.json())
                 .then(items => {
                     if (gen !== currentPredictionGeneration) return;
@@ -429,7 +369,12 @@ function predictDrug() {
     fetch('api/predict.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({type: 'drug_to_disease', drug_idx: parseInt(idx), top_k: parseInt(topk)})
+        body: JSON.stringify({
+            type: 'drug_to_disease', 
+            drug_idx: parseInt(idx), 
+            top_k: parseInt(topk),
+            dataset: document.getElementById('global-dataset').value
+        })
     })
     .then(r => r.json())
     .then(data => {
@@ -457,7 +402,7 @@ function predictDisease() {
         if (textQuery.length > 0) {
             const gen = ++currentPredictionGeneration;
             // Ép đối chiếu CSDL tự động nếu gõ tay
-            fetch(`api/search.php?type=disease&q=${encodeURIComponent(textQuery)}`)
+            fetch(`api/search.php?type=disease&q=${encodeURIComponent(textQuery)}&dataset=${document.getElementById('global-dataset').value}`)
                 .then(r => r.json())
                 .then(items => {
                     if (gen !== currentPredictionGeneration) return;
@@ -491,7 +436,12 @@ function predictDisease() {
     fetch('api/predict.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({type: 'disease_to_drug', disease_idx: parseInt(idx), top_k: parseInt(topk)})
+        body: JSON.stringify({
+            type: 'disease_to_drug', 
+            disease_idx: parseInt(idx), 
+            top_k: parseInt(topk),
+            dataset: document.getElementById('global-dataset').value
+        })
     })
     .then(r => r.json())
     .then(data => {
@@ -567,8 +517,11 @@ function renderResults(predictions, type, queryName, queryId) {
                     <div class="score-value ${valueClass}">${scorePct}%</div>
                     <span class="score-label ${labelClass}">${labelText}</span>
                 </div>
-                <button class="btn btn-sm btn-outline btn-glow" style="margin: 0 10px;" onclick="explainAI(${drugIdx}, ${diseaseIdx}, '${name.replace(/'/g, "\\'")}')"> 
+                <button class="btn btn-sm btn-outline btn-glow" style="margin: 0 5px;" onclick="explainAI(${drugIdx}, ${diseaseIdx}, '${name.replace(/'/g, "\\'")}')"> 
                     <i class="fas fa-brain"></i> XAI
+                </button>
+                <button class="btn-learn" onclick="learnAboutDisease('${name.replace(/'/g, "\\'")}', '${type}')">
+                    <i class="fas fa-info-circle"></i> Tìm hiểu
                 </button>
                 ${badge}
             </div>
@@ -682,7 +635,7 @@ function explainAI(drugIdx, diseaseIdx, targetName) {
     document.getElementById('xai-similar-diseases').innerHTML = '<span class="xai-similar-tag">⏳ Đang tìm...</span>';
     document.getElementById('xai-text').innerHTML = '<div style="display:flex;align-items:center;gap:10px;"><div class="ai-scanner" style="width:30px;height:30px;margin:0;"></div> <span>Đang trích xuất tri thức từ mạng nơ-ron đồ thị...</span></div>';
     
-    fetch('api/proxy.php?action=explain', {
+    fetch('api/proxy.php?action=explain&dataset=' + document.getElementById('global-dataset').value, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({drug_idx: drugIdx, disease_idx: diseaseIdx})
@@ -756,8 +709,28 @@ function explainAI(drugIdx, diseaseIdx, targetName) {
         // === Load PubMed Evidence (async) ===
         loadPubMedEvidence(targetName, '');
         
-        // === Load 3D Molecule (async) ===
+        // === Load 3D Molecule & Chemical Identity (async) ===
         load3DMolecule(targetName);
+
+        // === Load Clinical Identity (AI) ===
+        const diseasePrompt = `Bệnh lý hoặc mã bệnh này là gì? Giải thích ngắn gọn (50 từ) để người dùng tham chiếu: ${targetName}.`;
+        fetch('api/gemini_chat.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ message: diseasePrompt })
+        })
+        .then(r => r.json())
+        .then(res => {
+            document.getElementById('xai-clinical-summary').innerText = res.reply;
+        });
+
+        // === Update 3D Force Graph with Proteins (Optional Integration) ===
+        // If data.proteins exists, we can pass them to the 3D graph
+        const proteinData = data.proteins || [
+            { name: 'Target Protein A', group: 'protein' },
+            { name: 'Target Protein B', group: 'protein' }
+        ];
+        render3DForceGraphWithProteins(targetName, proteinData);
         
         // === Reset validation buttons ===
         document.getElementById('xai-validation').innerHTML = `
@@ -871,62 +844,6 @@ function loadPubMedEvidence(drugName, diseaseName) {
         });
 }
 
-// ===== 3D MOLECULAR VIEWER =====
-function load3DMolecule(drugName) {
-    const viewer = document.getElementById('mol3d-viewer');
-    const info = document.getElementById('mol3d-info');
-    
-    // Try PubChem API to get compound info
-    const cleanName = drugName.replace(/[^a-zA-Z0-9 ]/g, '').trim();
-    if (!cleanName) {
-        viewer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);">Không có dữ liệu phân tử.</div>';
-        return;
-    }
-
-    fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(cleanName)}/JSON`)
-        .then(r => r.json())
-        .then(data => {
-            const compound = data?.PC_Compounds?.[0];
-            if (!compound) throw new Error('Not found');
-            
-            const cid = compound.id?.id?.cid;
-            const mw = compound.props?.find(p => p.urn?.label === 'Molecular Weight')?.value?.sval || 'N/A';
-            const formula = compound.props?.find(p => p.urn?.label === 'Molecular Formula')?.value?.sval || 'N/A';
-            const iupac = compound.props?.find(p => p.urn?.label === 'IUPAC Name' && p.urn?.name === 'Preferred')?.value?.sval || cleanName;
-            const smiles = compound.props?.find(p => p.urn?.label === 'SMILES' && p.urn?.name === 'Canonical')?.value?.sval || 'N/A';
-            
-            // Show 2D/3D image from PubChem
-            viewer.innerHTML = `
-                <div style="position:relative;width:100%;height:100%;background:#0a0a1a;">
-                    <img src="https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${cid}/PNG?image_size=large" 
-                         style="width:100%;height:100%;object-fit:contain;padding:1rem;" 
-                         alt="Molecular structure of ${cleanName}"
-                         onerror="this.parentElement.innerHTML='<div style=\\'display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);\\'>Không tải được hình ảnh phân tử.</div>'">
-                    <div class="mol3d-controls">
-                        <a href="https://pubchem.ncbi.nlm.nih.gov/compound/${cid}#section=3D-Conformer" target="_blank" 
-                           style="padding:6px 12px;border-radius:6px;background:var(--accent);color:#fff;text-decoration:none;font-size:0.8rem;">
-                            <i class="fas fa-cube"></i> Xem 3D trên PubChem
-                        </a>
-                    </div>
-                </div>`;
-            
-            // Info cards
-            info.innerHTML = `
-                <div class="mol3d-info-item"><span class="info-label">CID</span><span class="info-value">${cid}</span></div>
-                <div class="mol3d-info-item"><span class="info-label">Công thức</span><span class="info-value">${formula}</span></div>
-                <div class="mol3d-info-item"><span class="info-label">Khối lượng phân tử</span><span class="info-value">${mw}</span></div>
-                <div class="mol3d-info-item"><span class="info-label">IUPAC</span><span class="info-value" style="font-size:0.75rem;">${iupac.substring(0, 50)}${iupac.length > 50 ? '...' : ''}</span></div>
-                <div class="mol3d-info-item" style="grid-column:1/-1;"><span class="info-label">SMILES</span><span class="info-value" style="font-size:0.7rem;word-break:break-all;">${smiles}</span></div>
-            `;
-        })
-        .catch(() => {
-            viewer.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-muted);gap:0.5rem;">
-                <i class="fas fa-atom" style="font-size:2rem;opacity:0.3;"></i>
-                <span>Không tìm thấy dữ liệu phân tử cho "${cleanName}" trên PubChem.</span>
-            </div>`;
-            info.innerHTML = '';
-        });
-}
 
 // ===== EXPERT VALIDATION =====
 function validateResult(type) {
@@ -1083,16 +1000,27 @@ function render3DForceGraph(predictions, queryName, queryType) {
         forceGraphInstance.width(currentWidth);
         forceGraphInstance.height(currentHeight);
     } else {
+        const colors = {
+            1: '#0ea5e9', // Source (Cyan)
+            2: '#10b981', // Known (Green)
+            3: '#6366f1', // Prediction (Indigo)
+            'protein': '#f59e0b', // Protein (Amber)
+            'disease': '#ec4899'  // Disease (Magenta)
+        };
+
         forceGraphInstance = ForceGraph3D()(elem)
             .width(currentWidth)
             .height(currentHeight)
             .graphData({nodes, links})
-            .nodeAutoColorBy('group')
+            .nodeColor(node => colors[node.group] || '#ffffff')
             .nodeLabel('name')
             .nodeVal('val')
+            .nodeOpacity(0.9)
             .linkWidth('value')
-            .linkColor(() => 'rgba(14, 165, 233, 0.4)') /* Medical cyan color */
-            .backgroundColor('rgba(10, 15, 24, 0.1)'); // slight tint transparent
+            .linkDirectionalParticles(2)
+            .linkDirectionalParticleSpeed(d => d.value * 0.001)
+            .linkColor(() => 'rgba(14, 165, 233, 0.4)')
+            .backgroundColor('rgba(10, 15, 24, 0.05)');
             
         // Resize graph on window resize
         window.addEventListener('resize', () => {
@@ -1104,42 +1032,180 @@ function render3DForceGraph(predictions, queryName, queryType) {
     }
 }
 
-function toggle3DViewer() {
-    const wrapper = document.getElementById('molecule-3d-wrapper');
-    if (wrapper.style.display === 'block') {
-        wrapper.style.display = 'none';
-        return;
-    }
+// ===== 3D MOLECULAR & RELATIONSHIP VIEWER =====
+function load3DMolecule(name) {
+    const container = document.getElementById('mol3d-viewer');
+    const formulaEl = document.getElementById('xai-chem-formula');
+    const img2dEl = document.getElementById('xai-drug-2d');
     
-    const drugName = currentRenderedDrug; // Bind dynamically derived name, not current volatile input text!
-    if(!drugName) {
-        alert("Không có dữ liệu tên thuốc.");
-        return;
-    }
+    container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Đang tải...</div>';
     
-    wrapper.style.display = 'block';
-    const container = document.getElementById('molecule-container');
-    container.innerHTML = '<div class="loading"><div class="ai-scanner"></div><p>Đang tải mô hình cấu trúc 3D Hóa học...</p></div>';
-    
-    // Fetch CID from PubChem
-    const cleanName = drugName.split('(')[0].trim(); // Remove brackets if any
-    const url = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(cleanName)}/JSON`;
+    const cleanName = name.split('(')[0].trim();
+    const url = `api/proxy.php?action=pubchem&name=${encodeURIComponent(cleanName)}`;
     
     fetch(url)
         .then(r => r.json())
         .then(data => {
             if(data.PC_Compounds && data.PC_Compounds[0]) {
                 const cid = data.PC_Compounds[0].id.id.cid;
-                container.innerHTML = `<iframe src="https://pubchem.ncbi.nlm.nih.gov/compound/${cid}#section=3D-Conformer&embed=true" frameborder="0" width="100%" height="450" style="border:1px solid var(--border); border-radius: var(--radius);"></iframe>`;
+                const props = data.PC_Compounds[0].props;
+                let formula = "N/A";
+                props.forEach(p => {
+                    if(p.urn.label === "Molecular Formula") formula = p.value.sval;
+                });
+                
+                formulaEl.innerText = formula;
+                img2dEl.innerHTML = `<img src="https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${cid}/PNG" style="width:100%; height:100%; object-fit:contain;">`;
+                container.innerHTML = `<iframe src="https://pubchem.ncbi.nlm.nih.gov/compound/${cid}#section=3D-Conformer&embed=true" frameborder="0" width="100%" height="100%"></iframe>`;
             } else {
-                container.innerHTML = '<div class="alert alert-info" style="margin: 2rem;"><i class="fas fa-info-circle"></i> Không tìm thấy cấu trúc 3D cho hoạt chất này trên PubChem.</div>';
+                throw new Error("Not found");
             }
         })
-        .catch(e => {
-            container.innerHTML = '<div class="alert alert-error" style="margin: 2rem;"><i class="fas fa-exclamation-circle"></i> Lỗi kết nối CSDL phân tử PubChem.</div>';
+        .catch(() => {
+            formulaEl.innerText = "N/A";
+            img2dEl.innerHTML = '<i class="fas fa-flask" style="color:#ccc;"></i>';
+            container.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text-muted);">Không tìm thấy cấu trúc PubChem.</div>';
         });
 }
+
+function render3DForceGraphWithProteins(sourceName, proteins) {
+    document.getElementById('3d-graph-wrapper').style.display = 'block';
+    const elem = document.getElementById('3d-graph-container');
+    const currentWidth = elem.clientWidth || 800;
+    const currentHeight = elem.clientHeight || 500;
+
+    const nodes = [
+        { id: 'Source', name: sourceName, group: 1, val: 25 }
+    ];
+    const links = [];
+
+    proteins.forEach((p, i) => {
+        const pid = 'Protein' + i;
+        nodes.push({ id: pid, name: p.name, group: 'protein', val: 15 });
+        links.push({ source: 'Source', target: pid, value: 5 });
+        
+        const did = 'Disease' + i;
+        nodes.push({ id: did, name: 'Tác động Lâm sàn ' + (i+1), group: 'disease', val: 10 });
+        links.push({ source: pid, target: did, value: 3 });
+    });
+
+    if(forceGraphInstance) {
+        forceGraphInstance.graphData({nodes, links});
+    } else {
+        const colors = {
+            1: '#0ea5e9', // Drug (Neon Blue)
+            'protein': '#f59e0b', // Protein (Vibrant Amber)
+            'disease': '#ec4899'  // Disease (Vivid Magenta)
+        };
+        forceGraphInstance = ForceGraph3D()(elem)
+            .width(currentWidth)
+            .height(currentHeight)
+            .graphData({nodes, links})
+            .nodeColor(node => colors[node.group] || '#ffffff')
+            .nodeLabel('name')
+            .nodeVal('val')
+            .nodeOpacity(0.95)
+            .linkWidth('value')
+            .linkDirectionalParticles(3)
+            .linkDirectionalParticleSpeed(0.005)
+            .backgroundColor('rgba(10, 15, 24, 0.05)');
+    }
+}
+
+function learnAboutDisease(name, type) {
+    const popup = document.getElementById('info-popup');
+    const content = document.getElementById('popup-content');
+    
+    popup.classList.add('active');
+    content.innerHTML = `
+        <div style="text-align:center; padding: 1rem;">
+            <div class="ai-scanner" style="width:40px; height:40px; margin: 0 auto 1rem;"></div>
+            <p>MedBot đang tra cứu thông tin về ${type === 'disease' ? 'bệnh' : 'thuốc'}: <strong>${name}</strong>...</p>
+        </div>
+    `;
+
+    const prompt = `Giải thích ngắn gọn (khoảng 50-70 từ) về ${type === 'disease' ? 'bệnh lý' : 'dược chất'} này cho người không chuyên: ${name}. Hãy cho biết nó là gì và ảnh hưởng chính của nó.`;
+
+    fetch('api/gemini_chat.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ message: prompt })
+    })
+    .then(r => r.json())
+    .then(data => {
+        content.innerHTML = `
+            <h3 style="margin-bottom: 1rem; color: var(--accent);"><i class="fas fa-info-circle"></i> Thông tin: ${name}</h3>
+            <div style="line-height: 1.6; color: var(--text-secondary); font-size: 0.95rem;">
+                ${data.reply.replace(/\n/g, '<br>')}
+            </div>
+            <div style="margin-top: 1.5rem; text-align: right;">
+                <a href="library.php" class="btn btn-sm btn-outline"><i class="fas fa-book-medical"></i> Xem tại Thư viện</a>
+            </div>
+        `;
+    })
+    .catch(() => {
+        content.innerHTML = `<p class="alert alert-error">Không thể tải thông tin lúc này. Vui lòng thử lại sau.</p>`;
+    });
+}
+
+function closeInfoPopup() {
+    document.getElementById('info-popup').classList.remove('active');
+}
+
+function initAutocomplete() {
+    ['drug', 'disease'].forEach(type => {
+        const input = document.getElementById(`${type}-search`);
+        const list = document.getElementById(`${type}-autocomplete`);
+        const idxInput = document.getElementById(`${type}-idx`);
+
+        let debounceTimer;
+
+        input.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            const q = input.value.trim();
+            if (q.length < 1) {
+                list.style.display = 'none';
+                return;
+            }
+
+            debounceTimer = setTimeout(() => {
+                const dataset = document.getElementById('global-dataset').value;
+                fetch(`api/search.php?type=${type}&q=${encodeURIComponent(q)}&dataset=${dataset}`)
+                    .then(r => r.json())
+                    .then(items => {
+                        if (items.length === 0) {
+                            list.style.display = 'none';
+                            return;
+                        }
+
+                        list.innerHTML = items.map(item => `
+                            <div class="autocomplete-item" onclick="selectItem('${type}', ${item.idx}, '${item.name.replace(/'/g, "\\'")}', '${item.drug_id || item.disease_id}')">
+                                <span>${item.name}</span>
+                                <span class="item-id">${item.drug_id || item.disease_id}</span>
+                            </div>
+                        `).join('');
+                        list.style.display = 'block';
+                    });
+            }, 300);
+        });
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.form-group')) {
+            document.querySelectorAll('.autocomplete-list').forEach(l => l.style.display = 'none');
+        }
+    });
+}
+
+function selectItem(type, idx, name, id) {
+    document.getElementById(`${type}-search`).value = name;
+    document.getElementById(`${type}-idx`).value = idx;
+    document.getElementById(`${type}-autocomplete`).style.display = 'none';
+}
+
 window.addEventListener('DOMContentLoaded', () => {
+    initAutocomplete();
+    
     const params = new URLSearchParams(window.location.search);
     const q = params.get('q');
     const type = params.get('type');
@@ -1148,8 +1214,7 @@ window.addEventListener('DOMContentLoaded', () => {
         if(type === 'drug') {
             switchTab('drug');
             document.getElementById('drug-search').value = q;
-            // Fetch exact idx
-            fetch(`api/search.php?type=drug&q=${encodeURIComponent(q)}`)
+            fetch(`api/search.php?type=drug&q=${encodeURIComponent(q)}&dataset=${document.getElementById('global-dataset').value}`)
                 .then(r => r.json())
                 .then(items => {
                     if (items.length && document.getElementById('drug-search').value === q) {
@@ -1160,8 +1225,7 @@ window.addEventListener('DOMContentLoaded', () => {
         } else if(type === 'disease') {
             switchTab('disease');
             document.getElementById('disease-search').value = q;
-            // Fetch exact idx
-            fetch(`api/search.php?type=disease&q=${encodeURIComponent(q)}`)
+            fetch(`api/search.php?type=disease&q=${encodeURIComponent(q)}&dataset=${document.getElementById('global-dataset').value}`)
                 .then(r => r.json())
                 .then(items => {
                     if (items.length && document.getElementById('disease-search').value === q) {

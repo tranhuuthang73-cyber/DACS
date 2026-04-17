@@ -13,6 +13,10 @@ class AMNTDDA(nn.Module):
         self.args = args
         self.drug_linear = nn.Linear(300, args.hgt_in_dim)
         self.protein_linear = nn.Linear(320, args.hgt_in_dim)
+        if args.hgt_in_dim != 64:
+            self.disease_linear = nn.Linear(64, args.hgt_in_dim)
+        else:
+            self.disease_linear = nn.Identity()
         
         # ====== TOPOLOGICAL FEATURE FUSION ======
         self.use_topo_features = getattr(args, 'use_topo_features', False)
@@ -72,6 +76,7 @@ class AMNTDDA(nn.Module):
 
         drug_feature = self.drug_linear(drug_feature)
         protein_feature = self.protein_linear(protein_feature)
+        disease_feature = self.disease_linear(disease_feature)
 
         feature_dict = {
             'drug': drug_feature,

@@ -8,7 +8,7 @@ define('DB_HOST', 'localhost');
 define('DB_NAME', 'amdgt');
 define('DB_USER', 'root');
 define('DB_PASS', '');
-define('AI_SERVER_URL', 'http://localhost:5001');
+define('AI_SERVER_URL', 'http://127.0.0.1:5001');
 
 // Start session
 session_start();

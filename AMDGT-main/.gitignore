@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Project specific
+Result/**/*.png
+ Result/**/*.xlsx
+# Results are included because user said "đẩy full", but CSVs are usually enough.
+# However, user said "FULL", so I will not exclude results unless they are absolute trash.
