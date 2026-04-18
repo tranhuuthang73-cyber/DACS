@@ -1,4 +1,4 @@
-Epoch,Time,AUC,AUPR,Accuracy,Precision,Recall,F1,MCC
+﻿Epoch,Time,AUC,AUPR,Accuracy,Precision,Recall,F1,MCC
 1,495.58,0.40252,0.44478,0.5,0.5,1.0,0.66667,0.0
 2,496.85,0.44416,0.49474,0.5,0.5,1.0,0.66667,0.0
 3,498.14,0.40501,0.48674,0.5,0.5,1.0,0.66667,0.0
