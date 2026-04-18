@@ -164,12 +164,7 @@ def predict_drug():
     top_indices = np.argsort(probs)[-top_k:][::-1]
     results = []
     
-    # Get drug name
-    query_name = f"Drug_{drug_idx}"
-    try:
-        from website.includes.db_helper import get_db_stats
-        # This is a bit tricky from flask, usually we just return the idx and let PHP handle name
-    except: pass
+    # Note: We just return the index and let PHP handle fetching the drug name from the database.
 
     for rank, idx in enumerate(top_indices, 1):
         idx = int(idx)

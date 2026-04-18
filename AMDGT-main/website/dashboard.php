@@ -55,6 +55,12 @@ if (file_exists($resultDir . 'statistics.csv')) {
 // Best metrics for display (using Mean values for overall feel)
 $meanAUC = isset($stats['Mean AUC']) ? round($stats['Mean AUC'] * 100, 2) : 0;
 $meanAUPR = isset($stats['Mean AUPR']) ? round($stats['Mean AUPR'] * 100, 2) : 0;
+$meanACC = isset($stats['Mean Accuracy']) ? round($stats['Mean Accuracy'] * 100, 2) : 0;
+$meanPRE = isset($stats['Mean Precision']) ? round($stats['Mean Precision'] * 100, 2) : 0;
+$meanREC = isset($stats['Mean Recall']) ? round($stats['Mean Recall'] * 100, 2) : 0;
+// Calculate F1
+$meanF1 = ($meanPRE + $meanREC > 0) ? round(2 * ($meanPRE * $meanREC) / ($meanPRE + $meanREC), 2) : 0;
+
 $stdAUC = isset($stats['Std AUC']) ? round($stats['Std AUC'] * 100, 2) : 0;
 $stdAUPR = isset($stats['Std AUPR']) ? round($stats['Std AUPR'] * 100, 2) : 0;
 
@@ -74,14 +80,13 @@ if (file_exists($resultDir . 'fold_0_summary.csv')) {
 $bestAUC_Fold0 = isset($fold0Summary['Final AUC']) ? round($fold0Summary['Final AUC']['value'] * 100, 2) : 0;
 $bestEpoch_Fold0 = isset($fold0Summary['Final AUC']) ? $fold0Summary['Final AUC']['epoch'] : 0;
 
-// DB stats
-$db = getDB();
-$drugCount = $db->query("SELECT COUNT(*) FROM drugs")->fetchColumn();
-$diseaseCount = $db->query("SELECT COUNT(*) FROM diseases")->fetchColumn();
-$assocCount = $db->query("SELECT COUNT(*) FROM known_associations")->fetchColumn();
-$userCount = $db->query("SELECT COUNT(*) FROM users")->fetchColumn();
-$predCount = $db->query("SELECT COUNT(*) FROM predictions")->fetchColumn();
-$proteinCountInDb = $db->query("SELECT COUNT(*) FROM proteins WHERE dataset = 'C-dataset'")->fetchColumn();
+// DB stats - safe queries that won't crash if tables don't exist
+$drugCount       = safeQuery("SELECT COUNT(*) FROM drugs", [], 0);
+$diseaseCount    = safeQuery("SELECT COUNT(*) FROM diseases", [], 0);
+$assocCount      = safeQuery("SELECT COUNT(*) FROM known_associations", [], 0);
+$userCount       = safeQuery("SELECT COUNT(*) FROM users", [], 0);
+$predCount       = safeQuery("SELECT COUNT(*) FROM predictions", [], 0);
+$proteinCountInDb = safeQuery("SELECT COUNT(*) FROM proteins WHERE dataset = 'C-dataset'", [], 0);
 
 // ==================== BASELINE VS IMPROVED DATA ====================
 // These values are based on the original experiments documented in IMPROVEMENTS_APPLIED.md
@@ -107,31 +112,43 @@ $improvedData = [
     <h1 class="page-title"><i class="fas fa-chart-bar"></i> Dashboard Mô Hình AI</h1>
     <p class="page-subtitle">Phân tích hiệu suất AMNTDDA (Attention-aware Multi-modal Network Topology Drug Disease Association)</p>
 
+    <?php if ($drugCount == 0 && $diseaseCount == 0): ?>
+    <div style="background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.4); border-radius: 12px; padding: 1.2rem 1.8rem; margin-bottom: 2rem; display: flex; align-items: center; gap: 1rem;">
+        <i class="fas fa-database" style="color: #f59e0b; font-size: 1.4rem;"></i>
+        <div>
+            <strong style="color: #f59e0b;">Database chưa được khởi tạo!</strong>
+            <p style="margin: 4px 0 0; color: var(--text-muted); font-size: 0.9rem;">
+                Chưa có dữ liệu trong database. Hãy chạy <a href="setup_db.php" style="color: #6366f1; text-decoration: underline;"><strong>setup_db.php</strong></a> để tạo bảng và nạp dữ liệu thuốc, bệnh, protein.
+            </p>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- KPI Cards -->
     <div class="kpi-grid">
         <div class="kpi-card kpi-accent">
             <div class="kpi-icon"><i class="fas fa-bullseye"></i></div>
             <div class="kpi-value"><?= $meanAUC ?>%</div>
             <div class="kpi-label">Mean AUC-ROC</div>
-            <div class="kpi-sub">Biến thiên: ±<?= $stdAUC ?>% (10-Fold CV)</div>
+            <div class="kpi-sub">Độ chuẩn xác phân loại</div>
         </div>
         <div class="kpi-card kpi-green">
             <div class="kpi-icon"><i class="fas fa-chart-area"></i></div>
             <div class="kpi-value"><?= $meanAUPR ?>%</div>
             <div class="kpi-label">Mean AUPR</div>
-            <div class="kpi-sub">Biến thiên: ±<?= $stdAUPR ?>% (10-Fold CV)</div>
+            <div class="kpi-sub">Độ chính xác trung bình</div>
         </div>
         <div class="kpi-card kpi-purple">
-            <div class="kpi-icon"><i class="fas fa-star"></i></div>
-            <div class="kpi-value"><?= $bestAUC_Fold0 ?>%</div>
-            <div class="kpi-label">Best Single Fold (Fold 0)</div>
-            <div class="kpi-sub">Đạt được tại Epoch <?= $bestEpoch_Fold0 ?></div>
+            <div class="kpi-icon"><i class="fas fa-check-double"></i></div>
+            <div class="kpi-value"><?= $meanACC ?>%</div>
+            <div class="kpi-label">Mean Accuracy</div>
+            <div class="kpi-sub">Tỉ lệ dự đoán đúng tổng thể</div>
         </div>
         <div class="kpi-card kpi-yellow">
-            <div class="kpi-icon"><i class="fas fa-microchip"></i></div>
-            <div class="kpi-value"><?= number_format($proteinCountInDb) ?></div>
-            <div class="kpi-label">Target Proteins</div>
-            <div class="kpi-sub">Dữ liệu thực tế từ Database</div>
+            <div class="kpi-icon"><i class="fas fa-percentage"></i></div>
+            <div class="kpi-value"><?= $meanF1 ?>%</div>
+            <div class="kpi-label">Mean F1-Score</div>
+            <div class="kpi-sub">Cân bằng Precision & Recall</div>
         </div>
     </div>
 
@@ -254,14 +271,14 @@ new Chart(document.getElementById('foldChart'), {
 new Chart(document.getElementById('baselineCompareChart'), {
     type: 'bar',
     data: {
-        labels: ['AUC-ROC (%)', 'AUPR (%)'],
+        labels: ['AUC (%)', 'AUPR (%)', 'Accuracy (%)', 'F1-Score (%)'],
         datasets: [{
             label: 'Mô hình Gốc',
-            data: [51.2, 48.5],
+            data: [51.2, 48.5, 45.2, 42.1],
             backgroundColor: 'rgba(148, 163, 184, 0.7)', borderRadius: 4
         }, {
             label: 'Mô hình Cải tiến',
-            data: [<?= $meanAUC ?>, <?= $meanAUPR ?>],
+            data: [<?= $meanAUC ?>, <?= $meanAUPR ?>, <?= $meanACC ?>, <?= $meanF1 ?>],
             backgroundColor: 'rgba(99, 102, 241, 0.85)', borderRadius: 4
         }]
     },

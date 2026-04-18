@@ -14,9 +14,14 @@ switch ($action) {
         }
         
         $db = getDB();
+        if ($db === null) {
+            header('Location: ../login.php?error=' . urlencode('Database chưa được khởi tạo. Hãy chạy setup_db.php!'));
+            exit;
+        }
         $stmt = $db->prepare("SELECT * FROM users WHERE username = ?");
         $stmt->execute([$username]);
         $user = $stmt->fetch();
+
         
         if ($user && $user['password_hash'] === hash('sha256', $password)) {
             $_SESSION['user_id'] = $user['id'];

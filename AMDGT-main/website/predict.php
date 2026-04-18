@@ -15,14 +15,7 @@ if (!isLoggedIn()) {
         <h1 style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;"><i class="fas fa-microscope" style="color: var(--accent);"></i> Dự Đoán Liên Kết</h1>
         <p class="section-subtitle" style="color: var(--text-muted);">Chọn chế độ phân tích mạng GNN và nhập dữ liệu vào ô dưới đây</p>
         
-        <div class="dataset-selector" style="margin-top: 1rem; display: flex; align-items: center; justify-content: center; gap: 10px;">
-            <label style="font-size: 0.9rem; color: var(--text-secondary);">Bộ dữ liệu:</label>
-            <select class="form-select" id="global-dataset" style="width: auto; padding: 8px 15px; background: #1e293b; border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); cursor: pointer;">
-                <option value="C-dataset" style="background: #1e293b; color: white;" selected>C-Dataset (Chuẩn)</option>
-                <option value="B-dataset" style="background: #1e293b; color: white;">B-Dataset (Mở rộng)</option>
-                <option value="F-dataset" style="background: #1e293b; color: white;">F-Dataset (Phát triển)</option>
-            </select>
-        </div>
+        <input type="hidden" id="global-dataset" value="ALL">
     </div>
 
     <div class="predict-grid-container">
@@ -34,9 +27,9 @@ if (!isLoggedIn()) {
                     <input type="text" class="form-input" id="drug-search" placeholder="Vd: Aspirin..."
                         autocomplete="off">
                     <input type="hidden" id="drug-idx">
+                    <input type="hidden" id="drug-dataset">
                     <div class="autocomplete-list" id="drug-autocomplete" style="display:none; z-index: 10;"></div>
                 </div>
-                <div class="alphabet-filter" id="drug-alphabet" data-type="drug"></div>
                 <div class="form-group">
                     <label class="form-label" style="font-size: 0.8rem;">Top-K</label>
                     <select class="form-select" id="drug-topk">
@@ -58,9 +51,9 @@ if (!isLoggedIn()) {
                     <input type="text" class="form-input" id="protein-search" placeholder="Vd: P01137..."
                         autocomplete="off">
                     <input type="hidden" id="protein-idx">
+                    <input type="hidden" id="protein-dataset">
                     <div class="autocomplete-list" id="protein-autocomplete" style="display:none; z-index: 10;"></div>
                 </div>
-                <div class="alphabet-filter" id="protein-alphabet" data-type="protein"></div>
                 <div class="form-group">
                     <label class="form-label" style="font-size: 0.8rem;">Top-K</label>
                     <select class="form-select" id="protein-topk">
@@ -83,9 +76,9 @@ if (!isLoggedIn()) {
                     <input type="text" class="form-input" id="disease-search" placeholder="Vd: DB00794..."
                         autocomplete="off">
                     <input type="hidden" id="disease-idx">
+                    <input type="hidden" id="disease-dataset">
                     <div class="autocomplete-list" id="disease-autocomplete" style="display:none; z-index: 10;"></div>
                 </div>
-                <div class="alphabet-filter" id="disease-alphabet" data-type="disease"></div>
                 <div class="form-group">
                     <label class="form-label" style="font-size: 0.8rem;">Top-K</label>
                     <select class="form-select" id="disease-topk">
@@ -428,7 +421,7 @@ if (!isLoggedIn()) {
                     type: 'drug_to_disease',
                     drug_idx: parseInt(idx),
                     top_k: parseInt(topk),
-                    dataset: document.getElementById('global-dataset').value
+                    dataset: document.getElementById('drug-dataset').value || 'C-dataset'
                 })
             })
                 .then(r => r.json())
@@ -460,7 +453,7 @@ if (!isLoggedIn()) {
                     type: 'disease_to_drug',
                     disease_idx: parseInt(idx),
                     top_k: parseInt(topk),
-                    dataset: document.getElementById('global-dataset').value
+                    dataset: document.getElementById('disease-dataset').value || 'C-dataset'
                 })
             })
                 .then(r => r.json())
@@ -490,7 +483,7 @@ if (!isLoggedIn()) {
                     type: 'protein_to_any',
                     protein_idx: parseInt(idx),
                     top_k: parseInt(topk),
-                    dataset: document.getElementById('global-dataset').value
+                    dataset: document.getElementById('protein-dataset').value || 'C-dataset'
                 })
             })
                 .then(r => r.json())
@@ -1284,8 +1277,11 @@ if (!isLoggedIn()) {
                                 }
 
                                 list.innerHTML = items.map(item => `
-                            <div class="autocomplete-item" onclick="selectItem('${type}', ${item.idx}, '${item.name.replace(/'/g, "\\'")}', '${item.drug_id || item.disease_id || item.protein_id}')">
-                                <span>${item.name}</span>
+                            <div class="autocomplete-item" onclick="selectItem('${type}', ${item.idx}, '${item.name.replace(/'/g, "\\'")}', '${item.drug_id || item.disease_id || item.protein_id}', '${item.dataset}')">
+                                <div style="display:flex; justify-content:space-between; width:100%;">
+                                    <span>${item.name}</span>
+                                    <span style="font-size:0.7rem; color:var(--accent); font-weight:600;">[${item.dataset}]</span>
+                                </div>
                                 <span class="item-id">${item.drug_id || item.disease_id || item.protein_id}</span>
                             </div>
                         `).join('');
@@ -1302,9 +1298,10 @@ if (!isLoggedIn()) {
             });
         }
 
-        function selectItem(type, idx, name, id) {
+        function selectItem(type, idx, name, id, dataset) {
             document.getElementById(`${type}-search`).value = name;
             document.getElementById(`${type}-idx`).value = idx;
+            document.getElementById(`${type}-dataset`).value = dataset;
             document.getElementById(`${type}-autocomplete`).style.display = 'none';
             checkTripletReady();
         }
@@ -1362,7 +1359,7 @@ if (!isLoggedIn()) {
                     drug_idx: parseInt(drugIdx),
                     protein_idx: parseInt(proteinIdx),
                     disease_idx: parseInt(diseaseIdx),
-                    dataset: document.getElementById('global-dataset').value
+                    dataset: document.getElementById('drug-dataset').value || 'C-dataset'
                 })
             })
                 .then(r => r.json())

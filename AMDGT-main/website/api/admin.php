@@ -6,6 +6,13 @@ if (!isAdmin()) {
 }
 
 $db = getDB();
+if ($db === null) {
+    jsonResponse(['error' => 'Database chưa được khởi tạo. Hãy chạy setup_db.php trước!'], 503);
+}
+
+// Wrap all queries in try-catch
+try {
+
 
 // GET requests
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -122,5 +129,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         default:
             jsonResponse(['error' => 'Unknown action'], 400);
     }
+}
+} catch (PDOException $e) {
+    jsonResponse(['error' => 'Lỗi database: ' . $e->getMessage()], 500);
 }
 ?>

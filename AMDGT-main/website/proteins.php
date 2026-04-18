@@ -9,34 +9,27 @@ $page = (int)($_GET['page'] ?? 1);
 $perPage = 20;
 $offset = ($page - 1) * $perPage;
 
-$db = getDB();
-
-// Fetch proteins
+// Fetch proteins - safe queries that won't crash if table doesn't exist
 if ($search) {
-    $stmt = $db->prepare("SELECT * FROM proteins WHERE dataset = ? AND (name LIKE ? OR protein_id LIKE ?) LIMIT ?, ?");
-    $stmt->bindValue(1, $dataset);
-    $stmt->bindValue(2, "%$search%");
-    $stmt->bindValue(3, "%$search%");
-    $stmt->bindValue(4, $offset, PDO::PARAM_INT);
-    $stmt->bindValue(5, $perPage, PDO::PARAM_INT);
-    $stmt->execute();
-    $proteins = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    $countStmt = $db->prepare("SELECT COUNT(*) FROM proteins WHERE dataset = ? AND (name LIKE ? OR protein_id LIKE ?)");
-    $countStmt->execute([$dataset, "%$search%", "%$search%"]);
-    $total = $countStmt->fetchColumn();
+    $proteins = safeQueryAll(
+        "SELECT * FROM proteins WHERE dataset = ? AND (name LIKE ? OR protein_id LIKE ?) LIMIT $offset, $perPage",
+        [$dataset, "%$search%", "%$search%"]
+    );
+    $total = safeQuery(
+        "SELECT COUNT(*) FROM proteins WHERE dataset = ? AND (name LIKE ? OR protein_id LIKE ?)",
+        [$dataset, "%$search%", "%$search%"],
+        0
+    );
 } else {
-    $stmt = $db->prepare("SELECT * FROM proteins WHERE dataset = ? LIMIT ?, ?");
-    $stmt->bindValue(1, $dataset);
-    $stmt->bindValue(2, $offset, PDO::PARAM_INT);
-    $stmt->bindValue(3, $perPage, PDO::PARAM_INT);
-    $stmt->execute();
-    $proteins = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    $total = $db->prepare("SELECT COUNT(*) FROM proteins WHERE dataset = ?");
-    $total->execute([$dataset]);
-    $total = $total->fetchColumn();
+    $proteins = safeQueryAll(
+        "SELECT * FROM proteins WHERE dataset = ? LIMIT $offset, $perPage",
+        [$dataset]
+    );
+    $total = safeQuery("SELECT COUNT(*) FROM proteins WHERE dataset = ?", [$dataset], 0);
 }
+
+$dbReady = (getDB() !== null);
+
 
 $totalPages = ceil($total / $perPage);
 ?>
@@ -46,6 +39,18 @@ $totalPages = ceil($total / $perPage);
         <h1 style="font-size: 2.8rem; font-weight: 800; margin-bottom: 1rem;"><i class="fas fa-dna" style="color: #ec4899;"></i> Trung Tâm Protein</h1>
         <p style="color: var(--text-muted); font-size: 1.1rem; max-width: 700px; margin: 0 auto;">Khám phá các Protein mục tiêu và mạng lưới tương tác sinh học trong hệ thống dự đoán GNN.</p>
     </div>
+
+    <?php if (!$dbReady || $total == 0): ?>
+    <div style="background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.4); border-radius: 12px; padding: 1.2rem 1.8rem; margin-bottom: 2rem; display: flex; align-items: center; gap: 1rem;">
+        <i class="fas fa-exclamation-triangle" style="color: #f59e0b; font-size: 1.4rem;"></i>
+        <div>
+            <strong style="color: #f59e0b;">Database chưa được khởi tạo!</strong>
+            <p style="margin: 4px 0 0; color: var(--text-muted); font-size: 0.9rem;">
+                Bảng dữ liệu chưa có. Hãy chạy <a href="setup_db.php" style="color: #6366f1; text-decoration: underline;"><strong>setup_db.php</strong></a> để tạo và nạp dữ liệu vào database.
+            </p>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <!-- Search & Filters -->
     <div class="card" style="margin-bottom: 2rem; padding: 1.5rem;">

@@ -23,10 +23,41 @@ function getDB() {
                 [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
             );
         } catch (PDOException $e) {
-            die("Database connection failed: " . $e->getMessage());
+            // Database not found - return null so pages can handle gracefully
+            return null;
         }
     }
     return $pdo;
+}
+
+/**
+ * Safely query the database. Returns $default if DB/table doesn't exist.
+ */
+function safeQuery($sql, $params = [], $default = 0) {
+    try {
+        $db = getDB();
+        if ($db === null) return $default;
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchColumn();
+    } catch (PDOException $e) {
+        return $default;
+    }
+}
+
+/**
+ * Safely fetch all rows. Returns $default array if DB/table doesn't exist.
+ */
+function safeQueryAll($sql, $params = [], $default = []) {
+    try {
+        $db = getDB();
+        if ($db === null) return $default;
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        return $default;
+    }
 }
 
 function isLoggedIn() {

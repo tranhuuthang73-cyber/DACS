@@ -16,12 +16,26 @@ $pdo->exec("CREATE DATABASE IF NOT EXISTS amdgt CHARACTER SET utf8mb4 COLLATE ut
 $pdo->exec("USE amdgt");
 echo "[OK] Database 'amdgt' created\n";
 
-// Drop old tables to apply new schema
-$pdo->exec("DROP TABLE IF EXISTS predictions");
-$pdo->exec("DROP TABLE IF EXISTS known_associations");
-$pdo->exec("DROP TABLE IF EXISTS proteins");
-$pdo->exec("DROP TABLE IF EXISTS drugs");
-$pdo->exec("DROP TABLE IF EXISTS diseases");
+// ⚠️  Chỉ drop tables nếu có tham số ?reset=1 trong URL (tránh mất dữ liệu vô tình)
+$forceReset = isset($_GET['reset']) && $_GET['reset'] === '1';
+
+if ($forceReset) {
+    echo "<div style='background:#fee2e2;border:1px solid #ef4444;padding:1rem;border-radius:8px;margin:1rem 0;'>
+        ⚠️ <strong>CHẾ ĐỘ RESET:</strong> Đang xóa toàn bộ dữ liệu cũ...
+    </div>\n";
+    $pdo->exec("DROP TABLE IF EXISTS predictions");
+    $pdo->exec("DROP TABLE IF EXISTS known_associations");
+    $pdo->exec("DROP TABLE IF EXISTS proteins");
+    $pdo->exec("DROP TABLE IF EXISTS drugs");
+    $pdo->exec("DROP TABLE IF EXISTS diseases");
+    echo "[OK] Đã xóa bảng cũ\n";
+} else {
+    echo "<div style='background:#dcfce7;border:1px solid #22c55e;padding:1rem;border-radius:8px;margin:1rem 0;'>
+        ✅ <strong>Chế độ an toàn:</strong> Chỉ thêm dữ liệu mới, không xóa dữ liệu cũ.<br>
+        Để reset hoàn toàn: <a href='?reset=1' style='color:#dc2626;font-weight:bold;'>setup_db.php?reset=1</a>
+    </div>\n";
+}
+
 
 $pdo->exec("CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,

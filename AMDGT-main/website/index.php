@@ -17,15 +17,21 @@ include 'includes/header.php';
 </section>
 
 <?php
-// Stats
-try {
-    $db = getDB();
-    $drugCount = $db->query("SELECT COUNT(*) FROM drugs")->fetchColumn();
-    $diseaseCount = $db->query("SELECT COUNT(*) FROM diseases")->fetchColumn();
-    $assocCount = $db->query("SELECT COUNT(*) FROM known_associations")->fetchColumn();
-    $predCount = $db->query("SELECT COUNT(*) FROM predictions")->fetchColumn();
-} catch (Exception $e) {
-    $drugCount = $diseaseCount = $assocCount = $predCount = '—';
+// Stats - tổng hợp từ tất cả dataset
+$drugCount = safeQuery("SELECT COUNT(*) FROM drugs", [], 0);
+$diseaseCount = safeQuery("SELECT COUNT(*) FROM diseases", [], 0);
+$assocCount = safeQuery("SELECT COUNT(*) FROM known_associations", [], 0);
+$predCount = safeQuery("SELECT COUNT(*) FROM predictions", [], 0);
+
+// Hiển thị theo từng dataset nếu có
+$datasetStats = [];
+$dsRows = safeQueryAll("SELECT dataset, COUNT(*) as cnt FROM drugs GROUP BY dataset", [], []);
+foreach ($dsRows as $row) {
+    $datasetStats[$row['dataset']]['drugs'] = $row['cnt'];
+}
+$dsRows = safeQueryAll("SELECT dataset, COUNT(*) as cnt FROM diseases GROUP BY dataset", [], []);
+foreach ($dsRows as $row) {
+    $datasetStats[$row['dataset']]['diseases'] = $row['cnt'];
 }
 ?>
 

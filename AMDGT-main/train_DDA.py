@@ -125,9 +125,9 @@ if __name__ == '__main__':
             mode='max',           # maximize AUC
             factor=0.5,           # reduce lr by 0.5
             patience=20,          # wait 20 epochs before reducing
-            verbose=True
         )
         # ================================================
+
 
         best_auc, best_aupr, best_accuracy, best_precision, best_recall, best_f1, best_mcc = 0, 0, 0, 0, 0, 0, 0
         early_stop_patience = 50
