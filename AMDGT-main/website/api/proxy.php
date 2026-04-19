@@ -14,12 +14,45 @@ if ($action === 'graph_stats') {
     exit;
 }
 
-if ($action === 'ablation_stats') {
-    $url = AI_SERVER_URL . '/ablation_stats';
-    $response = @file_get_contents($url);
-    if ($response === false) jsonResponse(['error' => 'Không thể kết nối AI Server'], 500);
-    echo $response;
-    exit;
+if ($action === 'model_performance') {
+    $dir = __DIR__ . "/../../Result/$dataset/AMNTDDA";
+    $files = glob($dir . "/10_fold_results_*.csv");
+    if (!$files) {
+        jsonResponse(['error' => 'Chưa có dữ liệu huấn luyện 10-fold cho dataset này.'], 404);
+    }
+    
+    // Sắp xếp lấy file mới nhất
+    usort($files, function($a, $b) {
+        return filemtime($b) - filemtime($a);
+    });
+    $latestFile = $files[0];
+    
+    $stats = [];
+    if (($handle = fopen($latestFile, "r")) !== FALSE) {
+        $header = fgetcsv($handle, 1000, ",");
+        while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+            if ($data[0] === 'Mean') {
+                foreach ($header as $i => $col) {
+                    if ($col && isset($data[$i])) {
+                        $stats[$col] = $data[$i];
+                    }
+                }
+                break;
+            }
+        }
+        fclose($handle);
+    }
+    
+    if (empty($stats)) {
+        jsonResponse(['error' => 'Không tìm thấy dòng Mean trong file kết quả.'], 500);
+    }
+    
+    jsonResponse([
+        'dataset' => $dataset,
+        'filename' => basename($latestFile),
+        'timestamp' => date("Y-m-d H:i:s", filemtime($latestFile)),
+        'stats' => $stats
+    ]);
 }
 
 if ($action === 'predict_protein') {

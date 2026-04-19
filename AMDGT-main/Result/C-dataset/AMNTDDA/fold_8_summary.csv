@@ -1,4 +1,4 @@
-﻿Metric,Value,Best_Epoch
+Metric,Value,Best_Epoch
 Final AUC,0.5944476557984033,1
 Final AUPR,0.5831681665092028,1
 Final Accuracy,0.5,1

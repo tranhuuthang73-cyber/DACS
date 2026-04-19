@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg') # Sử dụng backend không giao diện để tránh treo terminal
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
@@ -117,7 +119,7 @@ def plot_fold_results(dataset='C-dataset'):
     img_path = f'images/{dataset}_fold_comparison.png'
     plt.savefig(img_path, dpi=300, bbox_inches='tight')
     print(f"[OK] Saved: {img_path}")
-    plt.show()
+    # plt.show() - Đã tắt để tránh treo terminal
 
 
 def plot_epoch_results(dataset='C-dataset', fold=0):
@@ -184,7 +186,7 @@ def plot_epoch_results(dataset='C-dataset', fold=0):
     img_path = f'images/{dataset}_fold_{fold}_progress.png'
     plt.savefig(img_path, dpi=300, bbox_inches='tight')
     print(f"[OK] Saved: {img_path}")
-    plt.show()
+    # plt.show() - Đã tắt để tránh treo terminal
 
 
 if __name__ == '__main__':

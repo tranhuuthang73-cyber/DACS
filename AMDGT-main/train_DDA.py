@@ -12,6 +12,8 @@ from data_preprocess import *
 from model.AMNTDDA import AMNTDDA
 from metric import *
 import dgl
+from datetime import datetime
+import glob
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -106,7 +108,8 @@ if __name__ == '__main__':
     # ================================================
 
     Metric = ('Epoch\t\tTime\t\tAUC\t\tAUPR\t\tAccuracy\t\tPrecision\t\tRecall\t\tF1-score\t\tMcc')
-    AUCs, AUPRs = [], []
+    # Danh sách lưu kết quả tốt nhất của mỗi fold để tổng hợp cuối cùng
+    AUCs, AUPRs, Accs, Precs, Recalls, F1s, MCCs, Best_Epochs = [], [], [], [], [], [], [], []
 
     print('Dataset:', args.dataset)
 
@@ -204,7 +207,20 @@ if __name__ == '__main__':
                 
                 # ============ SAVE BEST MODEL ============
                 best_model_path = os.path.join(args.result_dir, f'fold_{i}_best_model.pt')
-                torch.save(model.state_dict(), best_model_path)
+                try:
+                    # Sử dụng file tạm để tránh lỗi 1224 (File locked/Mapped) trên Windows
+                    torch.save(model.state_dict(), best_model_path + '.tmp')
+                    if os.path.exists(best_model_path):
+                        try:
+                            os.remove(best_model_path)
+                        except:
+                            pass # Chấp nhận nếu không xóa được, sẽ rename đè lên
+                    os.replace(best_model_path + '.tmp', best_model_path)
+                except Exception as e:
+                    # Nếu vẫn kẹt, lưu với timestamp để không bao giờ thất bại
+                    fallback_path = os.path.join(args.result_dir, f'fold_{i}_best_model_epoch{best_epoch}.pt')
+                    torch.save(model.state_dict(), fallback_path)
+                    print(f'[WARN] Primary model file locked. Saved to: {fallback_path}')
                 # ========================================
                 
                 print('AUC improved at epoch ', best_epoch, ';\tbest_auc:', best_auc)
@@ -219,9 +235,20 @@ if __name__ == '__main__':
         
         # ============ LOAD BEST MODEL ============
         best_model_path = os.path.join(args.result_dir, f'fold_{i}_best_model.pt')
+        # Tìm file model tốt nhất (ưu tiên file primary, nếu không thấy thì tìm file fallback gần nhất)
+        actual_load_path = None
         if os.path.exists(best_model_path):
-            model.load_state_dict(torch.load(best_model_path))
-            print(f'[OK] Loaded best model from epoch {best_epoch}')
+            actual_load_path = best_model_path
+        else:
+            # Tìm các file fallback có dạng fold_i_best_model_epoch*.pt
+            import glob
+            fallbacks = glob.glob(os.path.join(args.result_dir, f'fold_{i}_best_model_epoch*.pt'))
+            if fallbacks:
+                actual_load_path = max(fallbacks, key=os.path.getmtime) # Lấy file mới nhất
+        
+        if actual_load_path:
+            model.load_state_dict(torch.load(actual_load_path))
+            print(f'[OK] Loaded best model from: {actual_load_path}')
         # =======================================
 
         # Luu metrics vao CSV
@@ -232,6 +259,12 @@ if __name__ == '__main__':
 
         AUCs.append(best_auc)
         AUPRs.append(best_aupr)
+        Accs.append(best_accuracy)
+        Precs.append(best_precision)
+        Recalls.append(best_recall)
+        F1s.append(best_f1)
+        MCCs.append(best_mcc)
+        Best_Epochs.append(best_epoch)
         
         # ============ SAVE FOLD SUMMARY ============
         fold_summary = {
@@ -257,33 +290,35 @@ if __name__ == '__main__':
     print('Mean AUPR:', AUPR_mean, '(', AUPR_std, ')')
     print('='*80)
     
-    # Luu ket qua tong hop
-    summary = pd.DataFrame({
-        'Fold': range(len(AUCs)),
+    # ============ TẠO FILE TỔNG HỢP 10-FOLD CHUẨN (GIỐNG ẢNH YÊU CẦU) ============
+    results_data = {
+        'Fold': [f'Fold {i}' for i in range(len(AUCs))],
+        'Best_Epoch': Best_Epochs,
         'AUC': AUCs,
-        'AUPR': AUPRs
-    })
-    summary_stats = pd.DataFrame({
-        'Metric': ['Mean AUC', 'Std AUC', 'Mean AUPR', 'Std AUPR'],
-        'Value': [AUC_mean, AUC_std, AUPR_mean, AUPR_std]
-    })
+        'AUPR': AUPRs,
+        'Accuracy': Accs,
+        'Precision': Precs,
+        'Recall': Recalls,
+        'F1-score': F1s,
+        'Mcc': MCCs
+    }
+    df_results = pd.DataFrame(results_data)
+
+    # Tính Mean và Std
+    mean_row = ['Mean', ''] + [np.mean(AUCs), np.mean(AUPRs), np.mean(Accs), np.mean(Precs), np.mean(Recalls), np.mean(F1s), np.mean(MCCs)]
+    std_row = ['Std', ''] + [np.std(AUCs), np.std(AUPRs), np.std(Accs), np.std(Precs), np.std(Recalls), np.std(F1s), np.std(MCCs)]
     
-    # Save summary statistics as CSV
-    summary.to_csv(args.result_dir + 'summary.csv', index=False)
-    summary_stats.to_csv(args.result_dir + 'statistics.csv', index=False)
+    # Tạo DataFrame cho Mean/Std để nối vào
+    df_stats = pd.DataFrame([mean_row, std_row], columns=df_results.columns)
+    df_final_results = pd.concat([df_results, df_stats], ignore_index=True)
+
+    # Lưu file với timestamp như trong ảnh
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    final_csv_name = f'10_fold_results_{timestamp}.csv'
+    final_csv_path = os.path.join(args.result_dir, final_csv_name)
     
-    # Try to save as Excel (optional)
-    try:
-        import openpyxl
-        with pd.ExcelWriter(args.result_dir + 'overall_summary.xlsx', engine='openpyxl') as writer:
-            summary.to_excel(writer, sheet_name='Per-Fold Results', index=False)
-            summary_stats.to_excel(writer, sheet_name='Statistics', index=False)
-        print(f'[OK] Saved summary to: {args.result_dir}overall_summary.xlsx')
-    except ImportError:
-        print('[WARN] openpyxl not installed. Using CSV format only.')
-    
-    print(f'[OK] Saved summary to: {args.result_dir}summary.csv')
-    print(f'[OK] Saved statistics to: {args.result_dir}statistics.csv')
+    df_final_results.to_csv(final_csv_path, index=False)
+    print(f'[OK] Generated REAL comprehensive results file: {final_csv_path}')
     print('\n' + '='*60)
     print('[OK] TRAINING COMPLETE!')
     print('  Improvements applied:')
@@ -293,6 +328,7 @@ if __name__ == '__main__':
     print('  [OK] Learning rate scheduling (adaptive)')
     print('  [OK] Gradient clipping (stability)')
     print('  [OK] Model checkpointing (best model saved)')
+    print('  [OK] Standardized 10-fold reporting (CSV)')
     print('')
     print('  Chạy: python plot_results.py')
     print('  Để xem biểu đồ kết quả!')

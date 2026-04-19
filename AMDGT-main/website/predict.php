@@ -99,9 +99,11 @@ if (!isLoggedIn()) {
                 style="padding: 18px 50px; font-size: 1.2rem; background: var(--gradient-1); border-radius: 50px; box-shadow: 0 10px 40px rgba(99, 102, 241, 0.4); min-width: 300px;">
                 <i class="fas fa-bolt"></i> CHẠY PHÂN TÍCH ĐA TẦNG (RUN ANALYSIS)
             </button>
-            <div id="triplet-hint" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 1rem;">
-                Gợi ý: Chọn cả 3 mục để kích hoạt chế độ <strong>Triple Alignment</strong> cao cấp nhất
-            </div>
+        </div>
+
+        <!-- Báo cáo 10-Fold (Đưa lên trên cùng để đảm bảo hiển thị) -->
+        <div id="model-performance-container" style="min-height: 50px; border: 3px solid #f59e0b; border-radius: 12px; margin-bottom: 2rem; padding: 15px; background: rgba(245, 158, 11, 0.05); position: relative;">
+            <div style="font-size: 0.9rem; font-weight: 700; color: #f59e0b;"><i class="fas fa-exclamation-circle"></i> VÙNG KIỂM TRA DỮ LIỆU AI (KHỞI TẠO...)</div>
         </div>
 
         <!-- Results Wrapper for Export -->
@@ -357,6 +359,18 @@ if (!isLoggedIn()) {
                 box-shadow: none !important;
             }
         }
+
+        .stat-item {
+            text-align: center;
+            padding: 0 10px;
+        }
+
+        @media (max-width: 768px) {
+            .stat-item {
+                flex: 1;
+                min-width: 80px;
+            }
+        }
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -430,8 +444,14 @@ if (!isLoggedIn()) {
                     renderResults(data.predictions, 'disease', data.query_name, parseInt(idx));
                     renderLandscape(data.predictions);
                     fetchSimilarDrugs(parseInt(idx));
+                    loadModelPerformance(document.getElementById('drug-dataset').value || 'C-dataset');
                 });
         }
+
+        window.onload = function() {
+            initAutocomplete();
+            loadModelPerformance('C-dataset'); // Tự động load ngay khi mở trang để test
+        };
 
         function predictDisease() {
             const idx = document.getElementById('disease-idx').value;
@@ -460,6 +480,7 @@ if (!isLoggedIn()) {
                 .then(data => {
                     if (myGen !== currentPredictionGeneration) return;
                     renderResults(data.predictions, 'drug', data.query_name, parseInt(idx));
+                    loadModelPerformance(document.getElementById('disease-dataset').value || 'C-dataset');
                 });
         }
 
@@ -494,6 +515,7 @@ if (!isLoggedIn()) {
                         return;
                     }
                     renderProteinResults(data, document.getElementById('protein-search').value);
+                    loadModelPerformance(document.getElementById('protein-dataset').value || 'C-dataset');
                 });
         }
 
@@ -1370,6 +1392,9 @@ if (!isLoggedIn()) {
                         return;
                     }
                     renderTripletResults(data);
+                    const ds = document.getElementById('drug-dataset').value || document.getElementById('global-dataset').value || 'C-dataset';
+                    console.log("Triplet Mode: Loading performance for", ds);
+                    loadModelPerformance(ds);
                 });
         }
 
@@ -1545,6 +1570,262 @@ if (!isLoggedIn()) {
                 .catch(() => {
                     list.innerHTML = '<div class="autocomplete-item" style="color:var(--danger);">Lỗi kết nối</div>';
                 });
+        }
+
+        function loadModelPerformance(dataset) {
+            const container = document.getElementById('model-performance-container');
+            if (!container) return;
+            
+            // Debug: In ra dataset đang được yêu cầu
+            console.log("Loading model performance for:", dataset);
+
+            // Nếu là C-dataset, hiển thị bảng dữ liệu chi tiết đã được nhúng sẵn
+            if (dataset && (dataset.toLowerCase().includes('c-dataset') || dataset === 'ALL')) {
+                renderCDataSetTable(container);
+                return;
+            }
+
+            container.innerHTML = `<div style="text-align:center; padding: 1rem;"><div class="ai-scanner" style="width:20px;height:20px;display:inline-block;"></div> Đang tải độ tin cậy mô hình cho ${dataset}...</div>`;
+
+            fetch(`api/proxy.php?action=model_performance&dataset=${dataset}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) {
+                        container.innerHTML = ''; // Không hiển thị nếu lỗi
+                        return;
+                    }
+                    const stats = data.stats;
+                    const auc = parseFloat(stats.AUC).toFixed(4);
+                    const aupr = parseFloat(stats.AUPR).toFixed(4);
+                    const acc = parseFloat(stats.Accuracy).toFixed(4);
+
+                    container.innerHTML = `
+                        <div class="card fade-in" style="border-left: 4px solid var(--accent); background: rgba(99, 102, 241, 0.05); overflow: hidden; margin-bottom: 1.5rem;">
+                            <div style="padding: 1.2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+                                <div style="display: flex; align-items: center; gap: 15px;">
+                                    <div style="width: 45px; height: 45px; border-radius: 12px; background: var(--gradient-1); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; box-shadow: 0 4px 15px rgba(99,102,241,0.3);">
+                                        <i class="fas fa-shield-check"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 800; font-size: 1rem; color: var(--text-primary); letter-spacing: -0.5px;">Độ Tin Cậy Mô Hình AI</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-muted);">Dựa trên kiểm định 10-Fold CV (${dataset})</div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 25px; flex-grow: 1; justify-content: center;">
+                                    <div class="stat-item">
+                                        <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 800; margin-bottom: 2px;">Mean AUC</div>
+                                        <div style="font-size: 1.25rem; font-weight: 900; color: #10b981; text-shadow: 0 0 10px rgba(16,185,129,0.2);">${auc}</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 800; margin-bottom: 2px;">Mean AUPR</div>
+                                        <div style="font-size: 1.25rem; font-weight: 900; color: #ec4899; text-shadow: 0 0 10px rgba(236,72,153,0.2);">${aupr}</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 800; margin-bottom: 2px;">Accuracy</div>
+                                        <div style="font-size: 1.25rem; font-weight: 900; color: #f59e0b; text-shadow: 0 0 10px rgba(245,158,11,0.2);">${acc}</div>
+                                    </div>
+                                </div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 6px 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05);">
+                                    <i class="fas fa-history" style="margin-right:5px;"></i> ${data.timestamp}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                })
+                .catch(e => {
+                    console.log('Performance fetch error', e);
+                    if (container) container.innerHTML = '';
+                });
+        }
+
+        function renderCDataSetTable(container) {
+            <?php
+            // Logic PHP CỰC KỲ MẠNH MẼ để tìm file kết quả
+            $dataset = 'C-dataset';
+            $targetDir = "Result/$dataset/AMNTDDA";
+            $foundDir = "";
+            $debugPaths = [];
+
+            // Thử dùng __DIR__ và quét ngược
+            $basePath = realpath(__DIR__ . "/.."); 
+            $testPath = $basePath . "/" . $targetDir;
+            $debugPaths[] = $testPath;
+            if (is_dir($testPath)) {
+                $foundDir = $testPath;
+            } else {
+                // Thử quét thủ công qua nhiều cấp
+                $current = __DIR__;
+                for ($i=0; $i<4; $i++) {
+                    $test = $current . "/" . $targetDir;
+                    $debugPaths[] = $test;
+                    if (is_dir($test)) { $foundDir = $test; break; }
+                    $current = dirname($current);
+                }
+            }
+
+            // Thử thêm Document Root + path cụ thể của Laragon
+            if (!$foundDir) {
+                $docRoot = rtrim($_SERVER['DOCUMENT_ROOT'], '/\\');
+                $testPath = $docRoot . "/AMDGT-main/" . $targetDir;
+                $debugPaths[] = $testPath;
+                if (is_dir($testPath)) $foundDir = $testPath;
+            }
+
+            $files = $foundDir ? glob($foundDir . "/10_fold_results_*.csv") : [];
+            $realData = [];
+            $mean = null;
+            $std = null;
+            $timestamp = "N/A";
+
+            if ($files) {
+                usort($files, function($a, $b) { return filemtime($b) - filemtime($a); });
+                $latestFile = $files[0];
+                $timestamp = date("H:i - d/m/Y", filemtime($latestFile));
+                
+                if (($handle = fopen($latestFile, "r")) !== FALSE) {
+                    $header = fgetcsv($handle, 1000, ",");
+                    if ($header) {
+                        while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+                            if (count($header) === count($data)) {
+                                $row = array_combine($header, $data);
+                                if (isset($row['Fold']) && strpos($row['Fold'], 'Fold') !== false) {
+                                    $realData[] = [
+                                        'f' => $row['Fold'],
+                                        'ep' => (int)($row['Best_Epoch'] ?? 0),
+                                        'auc' => (float)($row['AUC'] ?? 0),
+                                        'aupr' => (float)($row['AUPR'] ?? 0),
+                                        'acc' => (float)($row['Accuracy'] ?? 0),
+                                        'f1' => (float)($row['F1-score'] ?? 0),
+                                        'mcc' => (float)($row['Mcc'] ?? 0)
+                                    ];
+                                } elseif (isset($row['Fold']) && $row['Fold'] === 'Mean') {
+                                    $mean = [
+                                        'f' => "MEAN",
+                                        'auc' => (float)($row['AUC'] ?? 0),
+                                        'aupr' => (float)($row['AUPR'] ?? 0),
+                                        'acc' => (float)($row['Accuracy'] ?? 0),
+                                        'f1' => (float)($row['F1-score'] ?? 0),
+                                        'mcc' => (float)($row['Mcc'] ?? 0)
+                                    ];
+                                } elseif (isset($row['Fold']) && $row['Fold'] === 'Std') {
+                                    $std = [
+                                        'f' => "STD (±)",
+                                        'auc' => (float)($row['AUC'] ?? 0),
+                                        'aupr' => (float)($row['AUPR'] ?? 0),
+                                        'acc' => (float)($row['Accuracy'] ?? 0),
+                                        'f1' => (float)($row['F1-score'] ?? 0),
+                                        'mcc' => (float)($row['Mcc'] ?? 0)
+                                    ];
+                                }
+                            }
+                        }
+                    }
+                    fclose($handle);
+                }
+            }
+            ?>
+
+            try {
+                const debugPaths = <?php echo json_encode($debugPaths); ?>;
+                const data = <?php echo json_encode($realData); ?>;
+                const mean = <?php echo json_encode($mean); ?>;
+                const std = <?php echo json_encode($std); ?>;
+                const updateTime = "<?php echo $timestamp; ?>";
+                
+                console.log("PHP Search Paths attempted:", debugPaths);
+                console.log("PHP Data loaded status:", data ? "Success" : "Empty");
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = `
+                        <div class="card" style="padding:1.5rem; text-align:center; color:var(--text-muted);">
+                            <i class="fas fa-exclamation-triangle" style="color:#f59e0b; font-size:1.5rem; margin-bottom:10px;"></i>
+                            <div style="font-weight:700; color:var(--text-main); margin-bottom:10px;">Không tìm thấy file kết quả (10_fold_results_*.csv)</div>
+                            <div style="font-size:0.85rem;">Dataset yêu cầu: <strong>${dataset}</strong></div>
+                            <div style="font-size:0.75rem; margin-top:10px; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; text-align:left;">
+                                <strong>Gợi ý:</strong> Kiểm tra xem bạn đã huấn luyện xong dataset này chưa. <br>
+                                Đường dẫn dự kiến: <code>Result/${dataset}/AMNTDDA/</code>
+                            </div>
+                        </div>`;
+                    return;
+                }
+
+                let rows = data.map(r => `
+                    <tr>
+                        <td style="color:var(--accent); font-weight:700;">${r.f}</td>
+                        <td>${r.ep}</td>
+                        <td style="color:#10b981;">${r.auc.toFixed(4)}</td>
+                        <td style="color:#ec4899;">${r.aupr.toFixed(4)}</td>
+                        <td>${r.acc.toFixed(4)}</td>
+                        <td>${r.f1.toFixed(4)}</td>
+                        <td>${r.mcc.toFixed(4)}</td>
+                    </tr>
+                `).join('');
+
+                container.innerHTML = `
+                    <div class="card fade-in" style="margin-bottom: 2rem; border: 1px solid rgba(99, 102, 241, 0.2); overflow: hidden;">
+                        <div class="card-header" style="background: rgba(99, 102, 241, 0.05); justify-content: space-between;">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div class="card-icon" style="background: var(--gradient-1); color: white;"><i class="fas fa-microscope"></i></div>
+                                <div>
+                                    <div class="card-title">Báo Cáo Kiểm Định Mô Hình (10-Fold Cross-Validation)</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-muted);">Dữ liệu thực tế từ quá trình huấn luyện C-dataset</div>
+                                </div>
+                            </div>
+                            <div class="result-badge badge-known">Mô hình đã xác thực</div>
+                        </div>
+                        
+                        <div style="overflow-x: auto; padding: 0;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: center;">
+                                <thead>
+                                    <tr style="background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                        <th style="padding: 12px;">Fold</th>
+                                        <th>Best Epoch</th>
+                                        <th>AUC</th>
+                                        <th>AUPR</th>
+                                        <th>Accuracy</th>
+                                        <th>F1-Score</th>
+                                        <th>MCC</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${rows}
+                                    ${mean ? `
+                                    <tr style="background: rgba(16, 185, 129, 0.05); font-weight: 800; border-top: 2px solid rgba(16,185,129,0.3);">
+                                        <td style="padding: 12px; color: #10b981;">MEAN</td>
+                                        <td>-</td>
+                                        <td style="color: #10b981;">${mean.auc.toFixed(4)}</td>
+                                        <td style="color: #ec4899;">${mean.aupr.toFixed(4)}</td>
+                                        <td>${mean.acc.toFixed(4)}</td>
+                                        <td>${mean.f1.toFixed(4)}</td>
+                                        <td>${mean.mcc.toFixed(4)}</td>
+                                    </tr>` : ''}
+                                    ${std ? `
+                                    <tr style="background: rgba(245, 158, 11, 0.05); font-weight: 700; color: #f59e0b;">
+                                        <td style="padding: 10px;">STD (±)</td>
+                                        <td>-</td>
+                                        <td>${std.auc.toFixed(4)}</td>
+                                        <td>${std.aupr.toFixed(4)}</td>
+                                        <td>${std.acc.toFixed(4)}</td>
+                                        <td>${std.f1.toFixed(4)}</td>
+                                        <td>${std.mcc.toFixed(4)}</td>
+                                    </tr>` : ''}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div style="padding: 1rem; background: rgba(0,0,0,0.1); font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <i class="fas fa-history"></i>
+                                <span>Dữ liệu cập nhật lúc: <strong>${updateTime}</strong></span>
+                            </div>
+                            <span><i class="fas fa-check-circle"></i> Đã xác thực từ hệ thống</span>
+                        </div>
+                    </div>
+                `;
+            } catch (err) {
+                console.error("Error rendering table:", err);
+                container.innerHTML = `<div class="alert alert-error">Lỗi hiển thị bảng: ${err.message}</div>`;
+            }
         }
 
         function clearAlphaFilter(type, btn) {
