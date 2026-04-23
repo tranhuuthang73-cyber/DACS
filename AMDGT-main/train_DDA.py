@@ -330,8 +330,8 @@ if __name__ == '__main__':
     print('  [OK] Model checkpointing (best model saved)')
     print('  [OK] Standardized 10-fold reporting (CSV)')
     print('')
-    print('  Chạy: python plot_results.py')
-    print('  Để xem biểu đồ kết quả!')
+    print('  Chay: python plot_results.py')
+    print('  De xem bieu do ket qua!')
     print('='*60)
 
 

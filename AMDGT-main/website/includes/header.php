@@ -30,11 +30,11 @@
             <div class="nav-links">
                 <a href="index.php" class="nav-link"><i class="fas fa-home"></i> Trang chủ</a>
                 <a href="predict.php" class="nav-link"><i class="fas fa-search"></i> Dự đoán</a>
-                <a href="proteins.php" class="nav-link"><i class="fas fa-dna"></i> Protein</a>
-                <a href="library.php" class="nav-link"><i class="fas fa-book-medical"></i> Thư viện</a>
+               
+                
                 <?php if (isLoggedIn()): ?>
-                    <a href="dashboard.php" class="nav-link"><i class="fas fa-chart-bar"></i> Dashboard</a>
-                    <a href="batch.php" class="nav-link"><i class="fas fa-layer-group"></i> Batch</a>
+                   
+                  
                     <a href="history.php" class="nav-link"><i class="fas fa-history"></i> Lịch sử</a>
                 <?php endif; ?>
                 <?php if (isAdmin()): ?>
