@@ -588,6 +588,65 @@ def explain():
     })
 
 
+@app.route('/latent_path', methods=['POST'])
+def latent_path():
+    """Tìm các protein trung gian (bridge) nối giữa thuốc và bệnh cho Latent Path visualization"""
+    data_in = request.get_json()
+    dataset  = data_in.get('dataset', 'C-dataset')
+    drug_idx = data_in.get('drug_idx')
+    disease_idx = data_in.get('disease_idx')
+
+    ds = loaded_datasets.get(dataset)
+    if not ds:
+        return jsonify({'error': f'Dataset {dataset} not found'}), 400
+
+    dp = ds.get('dp_matrix')   # shape [n_drugs, n_proteins]
+    pd_ = ds.get('pd_matrix')  # shape [n_proteins, n_diseases]
+
+    bridge_proteins = []
+
+    if dp is not None and pd_ is not None:
+        try:
+            n_proteins = dp.shape[1]
+            for p_idx in range(n_proteins):
+                dp_val = int(dp[drug_idx, p_idx]) if drug_idx < dp.shape[0] else 0
+                pd_val = int(pd_[p_idx, disease_idx]) if disease_idx < pd_.shape[1] else 0
+                if dp_val == 1 and pd_val == 1:
+                    bridge_proteins.append({
+                        'protein_idx': p_idx,
+                        'dp_known': True,
+                        'pd_known': True
+                    })
+        except Exception as e:
+            return jsonify({'error': str(e), 'bridge_proteins': []}), 200
+
+    # Nếu không có bridge protein "đã biết", thử lấy protein có khả năng cao nhất
+    if not bridge_proteins and dp is not None and pd_ is not None:
+        try:
+            n_proteins = dp.shape[1]
+            candidates = []
+            for p_idx in range(n_proteins):
+                dp_val = int(dp[drug_idx, p_idx]) if drug_idx < dp.shape[0] else 0
+                pd_val = int(pd_[p_idx, disease_idx]) if disease_idx < pd_.shape[1] else 0
+                if dp_val == 1 or pd_val == 1:
+                    candidates.append({
+                        'protein_idx': p_idx,
+                        'dp_known': bool(dp_val),
+                        'pd_known': bool(pd_val)
+                    })
+            # Lấy tối đa 5 ứng viên có ít nhất 1 liên kết
+            bridge_proteins = candidates[:5]
+        except Exception:
+            pass
+
+    return jsonify({
+        'drug_idx': drug_idx,
+        'disease_idx': disease_idx,
+        'bridge_proteins': bridge_proteins[:10],  # Giới hạn 10 protein
+        'total_bridges': len(bridge_proteins)
+    })
+
+
 @app.route('/predict/triplet', methods=['POST'])
 def predict_triplet():
     data_in = request.get_json()
