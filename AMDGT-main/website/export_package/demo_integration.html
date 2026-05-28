@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gói Giao diện AMDGT Độc Lập</title>
+    <!-- Phông chữ & Icon (Không bắt buộc nhưng làm cho đẹp) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Link CSS Tách Rời (RẤT QUAN TRỌNG) -->
+    <link rel="stylesheet" href="assets/css/amdgt-predict.css">
+
+    <style>
+        /* CSS Cơ bản cho body vì không có header.php */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* Dark mode default */
+            color: #f8fafc;
+            margin: 0;
+            padding: 20px;
+        }
+        .demo-title { text-align: center; margin-bottom: 30px; color: #818cf8; }
+        .export-notice { background: rgba(99, 102, 241, 0.2); padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center; border: 1px solid #6366f1; }
+    </style>
+</head>
+<body class="dark-theme">
+
+    <div class="export-notice">
+        <h3>Đây là bản Demo Chạy Độc Lập (Standalone)</h3>
+        <p>Giao diện này đang chạy mà không cần PHP hay database! Bạn chỉ cần kéo thả 2 file CSS và JS vào dự án mới là xong.</p>
+    </div>
+
+    <!-- KHUNG ĐỂ CHỨA GIAO DIỆN (Bạn copy từ predict.php qua dự án mới) -->
+    <div class="search-cards-container">
+        <!-- Ví dụ 1 thẻ -->
+        <div class="search-card drug">
+            <div class="search-card-icon"><i class="fas fa-pills"></i></div>
+            <h3>Thuốc (Drugs)</h3>
+            <div class="card-subtitle">Dự đoán bệnh mà thuốc này có thể điều trị</div>
+            <div class="search-input-wrapper">
+                <i class="fas fa-search input-icon"></i>
+                <input type="text" id="drugInput" placeholder="Nhập tên thuốc hoặc ID (VD: DB00316)..." autocomplete="off">
+            </div>
+            <button class="analyze-btn" onclick="analyze('drug')">Phân tích bằng AI <i class="fas fa-magic"></i></button>
+        </div>
+        
+        <div class="search-card disease">
+            <div class="search-card-icon"><i class="fas fa-viruses"></i></div>
+            <h3>Bệnh (Diseases)</h3>
+            <div class="card-subtitle">Tìm các loại thuốc điều trị tiềm năng</div>
+            <div class="search-input-wrapper">
+                <i class="fas fa-search input-icon"></i>
+                <input type="text" id="diseaseInput" placeholder="Nhập tên bệnh hoặc ID (VD: DOID:10763)..." autocomplete="off">
+            </div>
+            <button class="analyze-btn" onclick="analyze('disease')">Phân tích bằng AI <i class="fas fa-magic"></i></button>
+        </div>
+
+        <div class="search-card protein">
+            <div class="search-card-icon"><i class="fas fa-dna"></i></div>
+            <h3>Khám Phá Cấu Trúc</h3>
+            <div class="card-subtitle">Hiển thị mạng lưới 3D và cấu trúc hóa học</div>
+            <button class="analyze-btn" style="margin-top: 50px;" onclick="document.getElementById('vizContainer').style.display='block';">Mở Demo Đồ Thị 3D <i class="fas fa-cube"></i></button>
+        </div>
+    </div>
+
+    <!-- KHUNG ĐỂ CHỨA ĐỒ THỊ 3D VÀ XAI -->
+    <div id="vizContainer" style="display:none; margin-top: 50px;">
+        <div class="viz-card">
+            <div class="viz-card-header">
+                <h3><i class="fas fa-network-wired"></i> Đồ thị mạng sinh học 3D (Demo)</h3>
+            </div>
+            <div class="viz-card-body" style="height: 600px; position: relative;">
+                <div id="graph3d" style="width: 100%; height: 100%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- THƯ VIỆN BÊN THỨ 3 (CDN) RẤT QUAN TRỌNG -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/3d-force-graph"></script>
+    <script src="https://3Dmol.org/build/3Dmol-min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <!-- Link JS Tách Rời (RẤT QUAN TRỌNG) -->
+    <script src="assets/js/amdgt-predict.js"></script>
+
+    <!-- Demo logic nhỏ để kích hoạt đồ thị 3D cho đẹp -->
+    <script>
+        // Khi bấm "Mở Demo", ta giả lập vẽ một đồ thị mẫu
+        document.querySelector('.protein .analyze-btn').addEventListener('click', () => {
+            const mockData = {
+                nodes: [
+                    { id: 'Node1', group: 1, label: 'Thuốc Demo', type: 'drug', val: 5 },
+                    { id: 'Node2', group: 2, label: 'Bệnh Demo', type: 'disease', val: 5 },
+                    { id: 'Node3', group: 3, label: 'Protein 1', type: 'protein', val: 3 },
+                    { id: 'Node4', group: 3, label: 'Protein 2', type: 'protein', val: 3 }
+                ],
+                links: [
+                    { source: 'Node1', target: 'Node2', value: 1 },
+                    { source: 'Node1', target: 'Node3', value: 1 },
+                    { source: 'Node2', target: 'Node4', value: 1 }
+                ]
+            };
+            
+            // Hàm render3DGraph này nằm trong amdgt-predict.js của chúng ta!
+            setTimeout(() => {
+                if(typeof render3DGraph === 'function') {
+                    render3DGraph('graph3d', mockData);
+                } else {
+                    alert('Chưa load được amdgt-predict.js!');
+                }
+            }, 500);
+        });
+    </script>
+</body>
+</html>

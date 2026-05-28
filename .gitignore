@@ -1,0 +1,30 @@
+# Dependency directories
+node_modules/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Backup and temp files
+*.bak
+*.tmp
+*.log
+
+# Scratch scripts
+scratch/
+Result/scratch/
+
+# IDE configs
+.idea/
+.vscode/
+.gemini/
+
+# Large ML binary checkpoints & data
+*.pt
+*.pth
+*.sqlite
+*.db
+*.pkl
+*.npy
+*.zip
+*.tar.gz

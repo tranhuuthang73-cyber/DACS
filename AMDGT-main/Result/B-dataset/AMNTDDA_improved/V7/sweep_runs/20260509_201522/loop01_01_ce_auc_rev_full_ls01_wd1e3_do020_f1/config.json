@@ -1,0 +1,32 @@
+{
+  "name": "ce_auc_rev_full_ls01_wd1e3_do020_f1",
+  "args": [
+    "--neighbor",
+    "5",
+    "--gt_out_dim",
+    "256",
+    "--hgt_in_dim",
+    "256",
+    "--hgt_head_dim",
+    "32",
+    "--dropout",
+    "0.20",
+    "--lr",
+    "1e-4",
+    "--weight_decay",
+    "1e-3",
+    "--label_smoothing",
+    "0.1",
+    "--loss_type",
+    "ce",
+    "--hetero_graph_mode",
+    "full",
+    "--pe_dim",
+    "32",
+    "--select_metric",
+    "auc",
+    "--add_reverse_edges",
+    "--threshold_metric",
+    "f1"
+  ]
+}
