@@ -20,7 +20,7 @@ function setGlobalDataset(ds, btn) {
     showToast('Đã chuyển sang: ' + ds, 'info');
 
     // Reload training curve comparison for new dataset
-    try { loadTrainingCurve(); } catch (e) { console.error('loadTrainingCurve on switch:', e); }
+    try { loadTrainingCurve(); } catch(e) { console.error('loadTrainingCurve on switch:', e); }
 }
 
 // --- Main AI & Visualization Logic ---
@@ -307,20 +307,60 @@ function initEventListeners() {
     });
 }
 
-function setTopK(type, k, btnElement) {
-    document.getElementById(type + '-topk').value = k;
+window.updateTopK = function(type, delta) {
+    const input = document.getElementById(type + '-topk-input');
+    if (!input) return;
+    let val = parseInt(input.value) || 20;
+    val += delta;
+    if (val < 1) val = 1;
+    if (val > 500) val = 500;
+    input.value = val;
+    syncTopK(type);
+};
+
+window.syncTopK = function(type) {
+    const input = document.getElementById(type + '-topk-input');
+    let val = input ? (parseInt(input.value) || 20) : parseInt(document.getElementById(type + '-topk').value);
+    if (val < 1) val = 1;
+    if (val > 500) val = 500;
+    
+    if (input) input.value = val;
+    const hiddenInput = document.getElementById(type + '-topk');
+    if (hiddenInput) hiddenInput.value = val;
+    
     document.querySelectorAll('.topk-btn[data-type="' + type + '"]').forEach(b => {
         b.classList.remove('active');
         b.style.background = 'rgba(255, 255, 255, 0.05)';
         b.style.borderColor = 'rgba(255, 255, 255, 0.1)';
         b.style.color = 'var(--text-secondary)';
+        
+        if (parseInt(b.getAttribute('data-k')) === val) {
+            b.classList.add('active');
+            if (type === 'drug') {
+                b.style.background = 'rgba(99, 102, 241, 0.2)';
+                b.style.borderColor = 'rgba(99, 102, 241, 0.4)';
+                b.style.color = '#818cf8';
+            } else if (type === 'disease') {
+                b.style.background = 'rgba(16, 185, 129, 0.2)';
+                b.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                b.style.color = '#34d399';
+            } else if (type === 'protein') {
+                b.style.background = 'rgba(236, 72, 153, 0.2)';
+                b.style.borderColor = 'rgba(236, 72, 153, 0.4)';
+                b.style.color = '#f472b6';
+            }
+        }
     });
-    if (btnElement) {
-        btnElement.classList.add('active');
-        btnElement.style.background = 'rgba(99, 102, 241, 0.2)';
-        btnElement.style.borderColor = 'rgba(99, 102, 241, 0.4)';
-        btnElement.style.color = '#818cf8';
+};
+
+function setTopK(type, k, btnElement) {
+    const input = document.getElementById(type + '-topk-input');
+    if (input) {
+        input.value = k;
+    } else {
+        document.getElementById(type + '-topk').value = k;
     }
+    syncTopK(type);
 }
 
 function switchVizTab(btn, tab) {
@@ -570,93 +610,58 @@ function renderGNN3DGraph(predictions, type, queryIdx, batchResults) {
                 tickCount++;
 
                 // LEFT: Drugs
-                const dStep = Math.min(35, 180 / Math.max(dn.length - 1, 1));
-                dn.forEach((n, i) => { n.fx = -150; n.fy = dn.length === 1 ? 0 : (i - (dn.length - 1) / 2) * dStep; n.fz = 0; });
-
+                const dStep = Math.min(25, 100 / Math.max(dn.length - 1, 1));
+                dn.forEach((n, i) => { n.fx = -60; n.fy = dn.length === 1 ? 0 : (i - (dn.length - 1) / 2) * dStep; n.fz = 0; });
+                
                 // RIGHT: Diseases
-                const disStep = Math.min(20, 180 / Math.max(disn.length - 1, 1));
-                disn.forEach((n, i) => { n.fx = 150; n.fy = disn.length === 1 ? 0 : (i - (disn.length - 1) / 2) * disStep; n.fz = 0; });
+                const disStep = Math.min(12, 100 / Math.max(disn.length - 1, 1));
+                disn.forEach((n, i) => { n.fx = 60; n.fy = disn.length === 1 ? 0 : (i - (disn.length - 1) / 2) * disStep; n.fz = 0; });
 
-                // CENTER: Proteins - Align exactly with their target to avoid crossing lines!
-                pn.forEach((n) => {
-                    n.fx = 0;
+                // CENTER: Proteins
+                pn.forEach((n) => { 
+                    n.fx = 0; 
                     n.fz = 0;
-                    if (n.targetNode) {
-                        const target = cn.find(x => x.id === n.targetNode);
-                        if (target && target.fy !== undefined) {
-                            n.fy = target.fy;
-                        }
-                    } else {
-                        n.fy = 0;
-                    }
+                    // Bỏ gán n.fy để các protein tự động dàn trải dựa trên lực đẩy
                 });
             });
 
             // Front camera
-            setTimeout(() => { Graph.cameraPosition({ x: 0, y: 0, z: 420 }, { x: 0, y: 0, z: 0 }, 1500); }, 500);
+            setTimeout(() => { Graph.cameraPosition({ x: 0, y: 0, z: 200 }, { x: 0, y: 0, z: 0 }, 1500); }, 500);
 
             // Column headers in 3D scene
             setTimeout(() => {
                 if (typeof SpriteText !== 'undefined') {
                     const scene = Graph.scene();
-                    [{ text: '💊 THUỐC', x: -150, c: '#60a5fa' }, { text: '🧬 PROTEIN', x: 0, c: '#fbbf24' }, { text: '🦠 BỆNH', x: 150, c: '#f87171' }].forEach(h => {
+                    [{ text: '💊 THUỐC', x: -60, c: '#60a5fa' }, { text: '🧬 PROTEIN', x: 0, c: '#fbbf24' }, { text: '🦠 BỆNH', x: 60, c: '#f87171' }].forEach(h => {
                         const s = new SpriteText(h.text);
                         s.color = h.c; s.textHeight = 6; s.backgroundColor = 'rgba(0,0,0,0.5)'; s.padding = 3; s.borderRadius = 4;
-                        s.position.set(h.x, 110, 0);
+                        s.position.set(h.x, 75, 0);
                         scene.add(s);
                     });
                 }
             }, 1000);
 
             window.addEventListener('resize', () => { if (canvasEl.offsetWidth) Graph.width(canvasEl.offsetWidth).height(canvasEl.offsetHeight); });
-        } else if (canvasEl) {
-            canvasEl.innerHTML = '<div style="color:#6366f1;text-align:center;padding:3rem;"><i class="fas fa-spinner fa-spin"></i> Đang tải lại thư viện 3D từ máy chủ dự phòng...</div>';
-            if (!window.loadingForceGraph3DPredict) {
-                window.loadingForceGraph3DPredict = true;
-                const script = document.createElement('script');
-                script.src = 'https://unpkg.com/3d-force-graph';
-                script.onload = () => {
-                    window.loadingForceGraph3DPredict = false;
-                    buildAndRenderGraph();
-                };
-                script.onerror = () => {
-                    window.loadingForceGraph3DPredict = false;
-                    canvasEl.innerHTML = '<div style="color:#f87171;text-align:center;padding:3rem;">Thư viện 3D Force Graph chưa tải được. Vui lòng F5 lại trang.</div>';
-                };
-                document.head.appendChild(script);
-            }
+        } else {
+            canvasEl.innerHTML = '<div style="color:#f87171;text-align:center;padding:3rem;">Thư viện 3D Force Graph chưa tải được. Vui lòng F5 lại trang.</div>';
         }
     }
 
-    // Helper to process pathway data and duplicate proteins per target to avoid crossing lines
+    // Helper to process pathway data without duplicating proteins so shared proteins work
     function processPathwayData(data, qKey) {
         if (!data.proteins || !data.edges) return;
-        const proteinTargets = {};
-        data.edges.forEach(e => {
-            if (e.source.startsWith('protein_') && (e.target.startsWith('disease_') || e.target.startsWith('drug_'))) {
-                if (!proteinTargets[e.source]) proteinTargets[e.source] = [];
-                proteinTargets[e.source].push(e.target);
-            }
+        
+        // Thêm protein nodes một lần duy nhất
+        data.proteins.forEach(p => {
+             const pKey = 'protein_' + p.idx;
+             if (!nodeSet.has(pKey)) {
+                 nodeSet.set(pKey, { name: p.name, type: 'protein', layer: 0.5, score: 0.8, isQuery: false });
+             }
         });
-        const proteinMap = {};
-        data.proteins.forEach(p => proteinMap['protein_' + p.idx] = p);
-        Object.keys(proteinTargets).forEach(pKey => {
-            const p = proteinMap[pKey];
-            if (!p) return;
-            proteinTargets[pKey].forEach(t => {
-                nodeSet.set(pKey + '_for_' + t, { name: p.name, type: 'protein', layer: 0.5, score: 0.8, isQuery: false, targetNode: t });
-            });
-        });
+        
+        // Thêm edges
         data.edges.forEach(e => {
-            if (e.source === 'query' && e.target.startsWith('protein_')) {
-                (proteinTargets[e.target] || []).forEach(t => {
-                    links.push({ source: qKey, target: e.target + '_for_' + t, weight: 0.6 });
-                });
-            } else if (e.source.startsWith('protein_') && (e.target.startsWith('disease_') || e.target.startsWith('drug_'))) {
-                links.push({ source: e.source + '_for_' + e.target, target: e.target, weight: 0.6 });
-            } else {
-                links.push({ source: e.source === 'query' ? qKey : e.source, target: e.target, weight: 0.6 });
-            }
+             links.push({ source: e.source === 'query' ? qKey : e.source, target: e.target, weight: 0.6 });
         });
     }
 
@@ -2085,10 +2090,10 @@ function initHubLogic(dInfo, sData, dName, sVal, status, pDrugIdx, pDiseaseIdx) 
             const roleLabels = { mediating: '🔗 CẦU NỐI', drug_linked: '💊 LIÊN KẾT THUỐC', disease_linked: '🦠 LIÊN KẾT BỆNH' };
             const roleColors = { mediating: '#ec4899', drug_linked: '#818cf8', disease_linked: '#34d399' };
             const aaColorMap = {
-                'A': '#4a90d9', 'V': '#4a90d9', 'I': '#4a90d9', 'L': '#4a90d9', 'M': '#4a90d9', 'F': '#6366f1', 'W': '#6366f1', 'P': '#7c8db5',
-                'S': '#34d399', 'T': '#34d399', 'Y': '#2dd4bf', 'N': '#34d399', 'Q': '#34d399', 'C': '#fbbf24', 'G': '#94a3b8',
-                'K': '#f87171', 'R': '#f87171', 'H': '#fb923c',
-                'D': '#f59e0b', 'E': '#f59e0b'
+                'A':'#4a90d9','V':'#4a90d9','I':'#4a90d9','L':'#4a90d9','M':'#4a90d9','F':'#6366f1','W':'#6366f1','P':'#7c8db5',
+                'S':'#34d399','T':'#34d399','Y':'#2dd4bf','N':'#34d399','Q':'#34d399','C':'#fbbf24','G':'#94a3b8',
+                'K':'#f87171','R':'#f87171','H':'#fb923c',
+                'D':'#f59e0b','E':'#f59e0b'
             };
             const aaGroupLabels = [
                 { name: 'Kỵ nước', nameEn: 'Hydrophobic', color: '#4a90d9', key: 'hydrophobic' },
@@ -2190,15 +2195,15 @@ function initHubLogic(dInfo, sData, dName, sVal, status, pDrugIdx, pDiseaseIdx) 
                         </div>
                         <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                             ${aaGroupLabels.map(g => {
-                    const st = stats[g.key];
-                    return `<div style="background:${g.color}0a;border:1px solid ${g.color}22;border-radius:8px;padding:8px 10px;">
+                                const st = stats[g.key];
+                                return `<div style="background:${g.color}0a;border:1px solid ${g.color}22;border-radius:8px;padding:8px 10px;">
                                     <div style="font-size:0.6rem;color:${g.color};font-weight:700;">${g.name} (${g.nameEn})</div>
                                     <div style="font-size:1.1rem;font-weight:900;color:var(--text-primary);margin-top:2px;">${st ? st.count : 0} <span style="font-size:0.7rem;color:var(--text-muted);font-weight:600;">/ ${seqLen}</span></div>
                                     <div style="height:4px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden;">
                                         <div style="height:100%;width:${st ? st.percent : 0}%;background:${g.color};border-radius:2px;"></div>
                                     </div>
                                 </div>`;
-                }).join('')}
+                            }).join('')}
                         </div>
                     </div>
 
@@ -2278,7 +2283,7 @@ function initHubLogic(dInfo, sData, dName, sVal, status, pDrugIdx, pDiseaseIdx) 
 }
 
 // Toggle protein detail panel in XAI modal
-window.toggleProteinDetail = function (idx) {
+window.toggleProteinDetail = function(idx) {
     const el = document.getElementById('protein-detail-' + idx);
     if (!el) return;
     if (el.style.display === 'none' || !el.style.display) {
@@ -2326,7 +2331,7 @@ async function fetchAlphaFoldPDB(uid) {
 }
 
 // Toggle protein 3D viewer panel in XAI modal
-window.toggleProtein3D = function (uid, pi, rc) {
+window.toggleProtein3D = function(uid, pi, rc) {
     const panel = document.getElementById('protein-3d-panel-' + pi);
     if (!panel) return;
     const btn = document.getElementById('btn-protein-3d-' + pi);
@@ -2367,7 +2372,7 @@ window.toggleProtein3D = function (uid, pi, rc) {
 };
 
 // Initialize 3Dmol viewer inside dynamic canvas element
-window.initProtein3D = async function (uid, pi) {
+window.initProtein3D = async function(uid, pi) {
     const container = document.getElementById('protein-3d-viewer-' + pi);
     const loader = document.getElementById('protein-3d-loading-' + pi);
     const errorEl = document.getElementById('protein-3d-error-' + pi);
@@ -2419,7 +2424,7 @@ window.initProtein3D = async function (uid, pi) {
             }
         };
         window.addEventListener('resize', resizeHandler);
-
+        
         // Clean up resize listener if panel gets unmounted / reloaded (stored inside viewer state)
         window.protein3DViewers[pi].resizeHandler = resizeHandler;
 
@@ -2431,7 +2436,7 @@ window.initProtein3D = async function (uid, pi) {
 };
 
 // Update representation style and color scheme based on user selections
-window.updateProtein3DStyle = function (pi) {
+window.updateProtein3DStyle = function(pi) {
     const state = window.protein3DViewers[pi];
     if (!state || !state.viewer) return;
 
@@ -2460,7 +2465,7 @@ window.updateProtein3DStyle = function (pi) {
 };
 
 // Toggle rotation of protein
-window.toggleProtein3DSpin = function (pi) {
+window.toggleProtein3DSpin = function(pi) {
     const state = window.protein3DViewers[pi];
     if (!state || !state.viewer) return;
 
@@ -2489,7 +2494,7 @@ window.toggleProtein3DSpin = function (pi) {
 };
 
 // Screenshot structure as PNG
-window.screenshotProtein3D = function (pi, uid) {
+window.screenshotProtein3D = function(pi, uid) {
     const container = document.getElementById('protein-3d-viewer-' + pi);
     if (!container) return;
 
@@ -2753,7 +2758,7 @@ function loadTrainingCurve() {
                             padding: 12,
                             cornerRadius: 10,
                             callbacks: {
-                                label: function (context) {
+                                label: function(context) {
                                     return `${context.dataset.label}: ${(context.parsed.y * 100).toFixed(2)}%`;
                                 }
                             }
@@ -3448,7 +3453,7 @@ function computeModelStats(predictions, totalK) {
 function buildRichInfoPanelHtml(predictions, queryType, queryName, dataset, batchResults, isImproved) {
     const endTime = Date.now();
     let elapsedVal = predictionStartTime ? ((endTime - predictionStartTime) / 1000) : 0;
-
+    
     // Simulate improved model being slightly faster (e.g. 15% faster) for realism
     if (isImproved && elapsedVal > 0) {
         elapsedVal = elapsedVal * 0.85;
@@ -3466,7 +3471,7 @@ function buildRichInfoPanelHtml(predictions, queryType, queryName, dataset, batc
 
     const typeLabel = queryType === 'drug' ? 'Thuốc → Bệnh' : queryType === 'disease' ? 'Bệnh → Thuốc' : queryType === 'combined' ? 'Thuốc ↔ Bệnh' : 'Protein → Cầu nối';
     const typeEmoji = queryType === 'drug' ? '💊' : queryType === 'disease' ? '🦠' : queryType === 'combined' ? '🔗' : '🧬';
-
+    
     // Use different colors for improved model
     const typeColor = isImproved ? '#34d399' : '#f472b6';
     const typeBg = isImproved ? 'rgba(52,211,153,0.15)' : 'rgba(244,114,182,0.15)';
@@ -3746,7 +3751,7 @@ function renderDualComparison(originalPreds, type, queryIdx, batchResults, query
     // 2. Update tables for both models using rich UI
     const origHtml = buildRichInfoPanelHtml(originalPreds, type, queryName || `Result #${queryIdx}`, dataset || window.currentDataset, batchResults, false);
     const imprHtml = buildRichInfoPanelHtml(improvedPreds, type, queryName || `Result #${queryIdx}`, dataset || window.currentDataset, batchResults, true);
-
+    
     const panelOrig = document.getElementById('panel-3d-info-original');
     const panelImpr = document.getElementById('panel-3d-info-improved');
     if (panelOrig) panelOrig.innerHTML = origHtml;

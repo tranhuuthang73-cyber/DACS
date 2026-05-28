@@ -63,102 +63,48 @@ if ($action === 'graph_stats') {
         fclose($h);
     }
     $numDrugs = count($drugNames);
-    $numProteins = count($proteinNames);
-    $numDiseases = count($allNodes) - $numDrugs - $numProteins;
     $diseaseNames = [];
-    for ($i = $numDrugs; $i < $numDrugs + $numDiseases; $i++) {
+    for ($i = $numDrugs; $i < count($allNodes); $i++) {
         $diseaseNames[$i - $numDrugs] = $allNodes[$i];
     }
 
-    // 4. Load edges (from Alledge.csv if exists, else from separate files)
+    // 4. Load Drug-Disease edges
     $ddEdges = [];
-    $dpEdges = [];
-    $pdEdges = [];
-    $drdrEdges = [];
-    $didiEdges = [];
-    $prprEdges = [];
-
-    $alledgeFile = $dataDir . 'Alledge.csv';
-    if (file_exists($alledgeFile)) {
-        $numDrugs = count($drugNames);
-        $numDiseases = count($diseaseNames);
-        $numProteins = count($proteinNames);
-
-        $dr_min = 0; $dr_max = $numDrugs - 1;
-        $di_min = $numDrugs; $di_max = $numDrugs + $numDiseases - 1;
-        $p_min = $numDrugs + $numDiseases; $p_max = $numDrugs + $numDiseases + $numProteins - 1;
-
-        $h = fopen($alledgeFile, 'r');
+    $ddFile = $dataDir . 'DrugDiseaseAssociationNumber.csv';
+    if (file_exists($ddFile)) {
+        $h = fopen($ddFile, 'r');
+        fgetcsv($h);
         while (($row = fgetcsv($h)) !== false) {
-            if (count($row) < 2) continue;
-            $u = (int)$row[0]; $v = (int)$row[1];
-
-            $u_type = ($u >= $dr_min && $u <= $dr_max) ? 'dr' : (($u >= $di_min && $u <= $di_max) ? 'di' : 'p');
-            $v_type = ($v >= $dr_min && $v <= $dr_max) ? 'dr' : (($v >= $di_min && $v <= $di_max) ? 'di' : 'p');
-
-            $types = [$u_type, $v_type];
-            sort($types);
-            $key = $types[0] . $types[1];
-
-            if ($key === 'drdi' || $key === 'didr') {
-                $d = ($u_type === 'dr') ? $u : $v;
-                $di = ($u_type === 'di') ? ($u - $numDrugs) : ($v - $numDrugs);
-                $ddEdges[] = [$d, $di];
-            } elseif ($key === 'drp' || $key === 'pdr') {
-                $d = ($u_type === 'dr') ? $u : $v;
-                $p = ($u_type === 'p') ? ($u - $numDrugs - $numDiseases) : ($v - $numDrugs - $numDiseases);
-                $dpEdges[] = [$d, $p];
-            } elseif ($key === 'dip' || $key === 'pidi') {
-                $di = ($u_type === 'di') ? ($u - $numDrugs) : ($v - $numDrugs);
-                $p = ($u_type === 'p') ? ($u - $numDrugs - $numDiseases) : ($v - $numDrugs - $numDiseases);
-                $pdEdges[] = [$p, $di];
-            } elseif ($key === 'drdr') {
-                $drdrEdges[] = [$u, $v];
-            } elseif ($key === 'didi') {
-                $di1 = $u - $numDrugs;
-                $di2 = $v - $numDrugs;
-                $didiEdges[] = [$di1, $di2];
-            } elseif ($key === 'prpr' || $key === 'pp') {
-                $p1 = $u - $numDrugs - $numDiseases;
-                $p2 = $v - $numDrugs - $numDiseases;
-                $prprEdges[] = [$p1, $p2];
-            }
+            if (count($row) >= 2)
+                $ddEdges[] = [(int) $row[0], (int) $row[1]];
         }
         fclose($h);
-    } else {
-        // Fallback to separate files if Alledge.csv does not exist
-        $ddFile = $dataDir . 'DrugDiseaseAssociationNumber.csv';
-        if (file_exists($ddFile)) {
-            $h = fopen($ddFile, 'r');
-            fgetcsv($h);
-            while (($row = fgetcsv($h)) !== false) {
-                if (count($row) >= 2)
-                    $ddEdges[] = [(int) $row[0], (int) $row[1]];
-            }
-            fclose($h);
-        }
+    }
 
-        $dpFile = $dataDir . 'DrugProteinAssociationNumber.csv';
-        if (file_exists($dpFile)) {
-            $h = fopen($dpFile, 'r');
-            fgetcsv($h);
-            while (($row = fgetcsv($h)) !== false) {
-                if (count($row) >= 2)
-                    $dpEdges[] = [(int) $row[0], (int) $row[1]];
-            }
-            fclose($h);
+    // 5. Load Drug-Protein edges
+    $dpEdges = [];
+    $dpFile = $dataDir . 'DrugProteinAssociationNumber.csv';
+    if (file_exists($dpFile)) {
+        $h = fopen($dpFile, 'r');
+        fgetcsv($h);
+        while (($row = fgetcsv($h)) !== false) {
+            if (count($row) >= 2)
+                $dpEdges[] = [(int) $row[0], (int) $row[1]];
         }
+        fclose($h);
+    }
 
-        $pdFile = $dataDir . 'ProteinDiseaseAssociationNumber.csv';
-        if (file_exists($pdFile)) {
-            $h = fopen($pdFile, 'r');
-            fgetcsv($h);
-            while (($row = fgetcsv($h)) !== false) {
-                if (count($row) >= 2)
-                    $pdEdges[] = [(int) $row[1], (int) $row[0]];
-            }
-            fclose($h);
+    // 6. Load Protein-Disease edges
+    $pdEdges = [];
+    $pdFile = $dataDir . 'ProteinDiseaseAssociationNumber.csv';
+    if (file_exists($pdFile)) {
+        $h = fopen($pdFile, 'r');
+        fgetcsv($h);
+        while (($row = fgetcsv($h)) !== false) {
+            if (count($row) >= 2)
+                $pdEdges[] = [(int) $row[1], (int) $row[0]];
         }
+        fclose($h);
     }
 
     // 7. Select top nodes by degree
@@ -167,10 +113,6 @@ if ($action === 'graph_stats') {
         $drugDegree[$d] = ($drugDegree[$d] ?? 0) + 1;
     foreach ($dpEdges as [$d, $_])
         $drugDegree[$d] = ($drugDegree[$d] ?? 0) + 1;
-    foreach ($drdrEdges as [$d1, $d2]) {
-        $drugDegree[$d1] = ($drugDegree[$d1] ?? 0) + 1;
-        $drugDegree[$d2] = ($drugDegree[$d2] ?? 0) + 1;
-    }
     arsort($drugDegree);
     $topDrugs = array_slice(array_keys($drugDegree), 0, $maxDrugs, true);
 
@@ -179,10 +121,6 @@ if ($action === 'graph_stats') {
         $disDegree[$di] = ($disDegree[$di] ?? 0) + 1;
     foreach ($pdEdges as [$_, $di])
         $disDegree[$di] = ($disDegree[$di] ?? 0) + 1;
-    foreach ($didiEdges as [$di1, $di2]) {
-        $disDegree[$di1] = ($disDegree[$di1] ?? 0) + 1;
-        $disDegree[$di2] = ($disDegree[$di2] ?? 0) + 1;
-    }
     arsort($disDegree);
     $topDiseases = array_slice(array_keys($disDegree), 0, $maxDiseases, true);
 
@@ -196,10 +134,6 @@ if ($action === 'graph_stats') {
     foreach ($pdEdges as [$p, $di]) {
         if (isset($topDisSet[$di]))
             $protDegree[$p] = ($protDegree[$p] ?? 0) + 1;
-    }
-    foreach ($prprEdges as [$p1, $p2]) {
-        $protDegree[$p1] = ($protDegree[$p1] ?? 0) + 1;
-        $protDegree[$p2] = ($protDegree[$p2] ?? 0) + 1;
     }
     arsort($protDegree);
     $topProteins = array_slice(array_keys($protDegree), 0, $maxProteins, true);
@@ -227,18 +161,6 @@ if ($action === 'graph_stats') {
     foreach ($pdEdges as [$p, $di]) {
         if (isset($topProtSet[$p]) && isset($topDisSet[$di]))
             $edges[] = ['source' => "prot_$p", 'target' => "dis_$di", 'type' => 'pd'];
-    }
-    foreach ($drdrEdges as [$d1, $d2]) {
-        if (isset($topDrugSet[$d1]) && isset($topDrugSet[$d2]))
-            $edges[] = ['source' => "drug_$d1", 'target' => "drug_$d2", 'type' => 'drdr'];
-    }
-    foreach ($didiEdges as [$di1, $di2]) {
-        if (isset($topDisSet[$di1]) && isset($topDisSet[$di2]))
-            $edges[] = ['source' => "dis_$di1", 'target' => "dis_$di2", 'type' => 'didi'];
-    }
-    foreach ($prprEdges as [$p1, $p2]) {
-        if (isset($topProtSet[$p1]) && isset($topProtSet[$p2]))
-            $edges[] = ['source' => "prot_$p1", 'target' => "prot_$p2", 'type' => 'prpr'];
     }
 
     jsonResponse([
@@ -1039,14 +961,6 @@ if ($action === 'bulk_pathway') {
         foreach ($targetIndices as $di) {
             $targetProteins = $pdEdges[$di] ?? [];
             $shared = array_intersect($queryProteins, $targetProteins);
-            if (empty($shared) && count($queryProteins) > 0) {
-                $idx = ($queryIdx + $di) % count($queryProteins);
-                $shared = [$queryProteins[$idx]];
-            } elseif (empty($shared) && count($targetProteins) > 0) {
-                $idx = ($queryIdx + $di) % count($targetProteins);
-                $shared = [$targetProteins[$idx]];
-            }
-            // Limit to top 3 proteins per target to avoid clutter
             $shared = array_unique($shared);
             $shared = array_slice($shared, 0, 3);
             foreach ($shared as $pIdx) {
@@ -1062,13 +976,6 @@ if ($action === 'bulk_pathway') {
         foreach ($targetIndices as $dri) {
             $targetProteins = $dpEdges[$dri] ?? [];
             $shared = array_intersect($queryProteins, $targetProteins);
-            if (empty($shared) && count($queryProteins) > 0) {
-                $idx = ($queryIdx + $dri) % count($queryProteins);
-                $shared = [$queryProteins[$idx]];
-            } elseif (empty($shared) && count($targetProteins) > 0) {
-                $idx = ($queryIdx + $dri) % count($targetProteins);
-                $shared = [$targetProteins[$idx]];
-            }
             $shared = array_unique($shared);
             $shared = array_slice($shared, 0, 3);
             foreach ($shared as $pIdx) {
@@ -1172,14 +1079,7 @@ if ($action === 'pathway') {
 
     // Find shared proteins (mechanism bridge)
     $sharedProteins = array_intersect($linkedProteins, $diseaseProteins);
-    
-    if (empty($sharedProteins) && count($linkedProteins) > 0) {
-        $idx = ($drugIdx + $diseaseIdx) % count($linkedProteins);
-        $sharedProteins = [$linkedProteins[$idx]];
-    } elseif (empty($sharedProteins) && count($diseaseProteins) > 0) {
-        $idx = ($drugIdx + $diseaseIdx) % count($diseaseProteins);
-        $sharedProteins = [$diseaseProteins[$idx]];
-    }
+
     
     // Remove duplicates and take exactly up to 3 proteins to match bulk_pathway
     $sharedProteins = array_unique($sharedProteins);
