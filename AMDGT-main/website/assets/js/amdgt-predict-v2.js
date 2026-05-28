@@ -609,6 +609,7 @@ function renderGNN3DGraph(predictions, type, queryIdx, batchResults) {
             }, 1000);
 
             window.addEventListener('resize', () => { if (canvasEl.offsetWidth) Graph.width(canvasEl.offsetWidth).height(canvasEl.offsetHeight); });
+        } else {
             canvasEl.innerHTML = '<div style="color:#f87171;text-align:center;padding:3rem;">Thư viện 3D Force Graph chưa tải được. Vui lòng F5 lại trang.</div>';
         }
     }
