@@ -570,12 +570,12 @@ function renderGNN3DGraph(predictions, type, queryIdx, batchResults) {
                 tickCount++;
 
                 // LEFT: Drugs
-                const dStep = Math.min(25, 100 / Math.max(dn.length - 1, 1));
-                dn.forEach((n, i) => { n.fx = -60; n.fy = dn.length === 1 ? 0 : (i - (dn.length - 1) / 2) * dStep; n.fz = 0; });
+                const dStep = Math.min(35, 180 / Math.max(dn.length - 1, 1));
+                dn.forEach((n, i) => { n.fx = -150; n.fy = dn.length === 1 ? 0 : (i - (dn.length - 1) / 2) * dStep; n.fz = 0; });
 
                 // RIGHT: Diseases
-                const disStep = Math.min(12, 100 / Math.max(disn.length - 1, 1));
-                disn.forEach((n, i) => { n.fx = 60; n.fy = disn.length === 1 ? 0 : (i - (disn.length - 1) / 2) * disStep; n.fz = 0; });
+                const disStep = Math.min(20, 180 / Math.max(disn.length - 1, 1));
+                disn.forEach((n, i) => { n.fx = 150; n.fy = disn.length === 1 ? 0 : (i - (disn.length - 1) / 2) * disStep; n.fz = 0; });
 
                 // CENTER: Proteins - Align exactly with their target to avoid crossing lines!
                 pn.forEach((n) => {
@@ -593,23 +593,38 @@ function renderGNN3DGraph(predictions, type, queryIdx, batchResults) {
             });
 
             // Front camera
-            setTimeout(() => { Graph.cameraPosition({ x: 0, y: 0, z: 200 }, { x: 0, y: 0, z: 0 }, 1500); }, 500);
+            setTimeout(() => { Graph.cameraPosition({ x: 0, y: 0, z: 420 }, { x: 0, y: 0, z: 0 }, 1500); }, 500);
 
             // Column headers in 3D scene
             setTimeout(() => {
                 if (typeof SpriteText !== 'undefined') {
                     const scene = Graph.scene();
-                    [{ text: '💊 THUỐC', x: -60, c: '#60a5fa' }, { text: '🧬 PROTEIN', x: 0, c: '#fbbf24' }, { text: '🦠 BỆNH', x: 60, c: '#f87171' }].forEach(h => {
+                    [{ text: '💊 THUỐC', x: -150, c: '#60a5fa' }, { text: '🧬 PROTEIN', x: 0, c: '#fbbf24' }, { text: '🦠 BỆNH', x: 150, c: '#f87171' }].forEach(h => {
                         const s = new SpriteText(h.text);
                         s.color = h.c; s.textHeight = 6; s.backgroundColor = 'rgba(0,0,0,0.5)'; s.padding = 3; s.borderRadius = 4;
-                        s.position.set(h.x, 75, 0);
+                        s.position.set(h.x, 110, 0);
                         scene.add(s);
                     });
                 }
             }, 1000);
 
             window.addEventListener('resize', () => { if (canvasEl.offsetWidth) Graph.width(canvasEl.offsetWidth).height(canvasEl.offsetHeight); });
-            canvasEl.innerHTML = '<div style="color:#f87171;text-align:center;padding:3rem;">Thư viện 3D Force Graph chưa tải được. Vui lòng F5 lại trang.</div>';
+        } else if (canvasEl) {
+            canvasEl.innerHTML = '<div style="color:#6366f1;text-align:center;padding:3rem;"><i class="fas fa-spinner fa-spin"></i> Đang tải lại thư viện 3D từ máy chủ dự phòng...</div>';
+            if (!window.loadingForceGraph3DPredict) {
+                window.loadingForceGraph3DPredict = true;
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/3d-force-graph';
+                script.onload = () => {
+                    window.loadingForceGraph3DPredict = false;
+                    buildAndRenderGraph();
+                };
+                script.onerror = () => {
+                    window.loadingForceGraph3DPredict = false;
+                    canvasEl.innerHTML = '<div style="color:#f87171;text-align:center;padding:3rem;">Thư viện 3D Force Graph chưa tải được. Vui lòng F5 lại trang.</div>';
+                };
+                document.head.appendChild(script);
+            }
         }
     }
 

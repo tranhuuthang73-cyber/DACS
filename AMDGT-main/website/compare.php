@@ -2118,8 +2118,8 @@ foreach ($metricKeys as $key) {
             const diseases = this.nodes.filter(n => n.type === 'disease');
 
             if (this.layout === 'spheres') {
-                const rInner = 60;
-                const rOuter = 130;
+                const rInner = 220;
+                const rOuter = 460;
 
                 const arrangeSphere = (list, radius) => {
                     const len = list.length;
@@ -2144,7 +2144,7 @@ foreach ($metricKeys as $key) {
             } else if (this.layout === 'planes') {
                 const arrangePlane = (list, planeX) => {
                     const len = list.length;
-                    const radius = 90;
+                    const radius = 320;
                     list.forEach((n, idx) => {
                         const angle = (idx / len) * 2 * Math.PI;
                         n.fx = planeX;
@@ -2153,9 +2153,9 @@ foreach ($metricKeys as $key) {
                     });
                 };
 
-                if (this.type === 'dd') { arrangePlane(drugs, -80); arrangePlane(diseases, 80); }
-                else if (this.type === 'dp') { arrangePlane(drugs, -80); arrangePlane(proteins, 80); }
-                else if (this.type === 'pd') { arrangePlane(proteins, -80); arrangePlane(diseases, 80); }
+                if (this.type === 'dd') { arrangePlane(drugs, -280); arrangePlane(diseases, 280); }
+                else if (this.type === 'dp') { arrangePlane(drugs, -280); arrangePlane(proteins, 280); }
+                else if (this.type === 'pd') { arrangePlane(proteins, -280); arrangePlane(diseases, 280); }
             }
         }
         
@@ -2189,7 +2189,25 @@ foreach ($metricKeys as $key) {
             if (!canvasEl) return;
             
             if (typeof ForceGraph3D === 'undefined') {
-                canvasEl.innerHTML = '<div style="color:#f87171;text-align:center;padding:3rem;">Thư viện 3D Force Graph chưa tải được. Vui lòng F5 lại trang.</div>';
+                canvasEl.innerHTML = '<div style="color:#6366f1;text-align:center;padding:3rem;"><i class="fas fa-spinner fa-spin"></i> Đang tải lại thư viện 3D từ máy chủ dự phòng...</div>';
+                if (!window.loadingForceGraph3DCompare) {
+                    window.loadingForceGraph3DCompare = true;
+                    const script = document.createElement('script');
+                    script.src = 'https://unpkg.com/3d-force-graph';
+                    script.onload = () => {
+                        window.loadingForceGraph3DCompare = false;
+                        Object.keys(cardGraphs).forEach(k => {
+                            if (cardGraphs[k] && cardGraphs[k].mode === '3d') {
+                                cardGraphs[k].render3D();
+                            }
+                        });
+                    };
+                    script.onerror = () => {
+                        window.loadingForceGraph3DCompare = false;
+                        canvasEl.innerHTML = '<div style="color:#f87171;text-align:center;padding:3rem;">Thư viện 3D Force Graph chưa tải được. Vui lòng F5 lại trang.</div>';
+                    };
+                    document.head.appendChild(script);
+                }
                 return;
             }
             
