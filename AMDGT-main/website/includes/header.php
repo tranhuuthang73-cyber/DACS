@@ -21,12 +21,12 @@
         }
     </script>
 
-    <!-- UI/UX LIBRARIES -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://3Dmol.org/build/3Dmol-min.js"></script>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <!-- UI/UX LIBRARIES (Offline-First) -->
+    <script src="assets/js/chart.min.js"></script>
+    <script src="assets/js/3Dmol-min.js"></script>
+    <script src="assets/js/d3.v7.min.js"></script>
     <script src="https://unpkg.com/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
-    <script src="https://unpkg.com/3d-force-graph"></script>
+    <script src="assets/js/3d-force-graph.min.js"></script>
 </head>
 
 <body>
