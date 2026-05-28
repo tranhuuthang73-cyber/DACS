@@ -1741,36 +1741,29 @@ foreach ($metricKeys as $key) {
                     const rawNodes = data.nodes || [];
                     const rawEdges = data.edges || [];
                     
-                    // Filter out isolated nodes and disconnected components by only keeping nodes with core cross-interactions (dd, dp, pd)
-                    // This prevents isolated self-interacting pairs (e.g. drug-drug pairs) from flying to infinity under repulsion and clumping the camera view.
+                    // Filter allowed node types based on this card's bipartite config
+                    const allowedNodes = rawNodes.filter(n => this.config.nodeTypes.includes(n.type));
+                    const allowedNodeIds = new Set(allowedNodes.map(n => n.id));
+                    
+                    // Filter allowed edge types and ensure both endpoints are allowed nodes
+                    const allowedEdges = rawEdges.filter(e => {
+                        if (!this.config.edgeTypes.includes(e.type)) return false;
+                        const sourceId = (typeof e.source === 'object' && e.source !== null) ? e.source.id : e.source;
+                        const targetId = (typeof e.target === 'object' && e.target !== null) ? e.target.id : e.target;
+                        return allowedNodeIds.has(sourceId) && allowedNodeIds.has(targetId);
+                    });
+
+                    // Keep only nodes that have active links in this specific bipartite relationship
                     const activeNodeIds = new Set();
-                    rawEdges.forEach(e => {
-                        if (e.type === 'dd' || e.type === 'dp' || e.type === 'pd') {
-                            const sourceId = (typeof e.source === 'object' && e.source !== null) ? e.source.id : e.source;
-                            const targetId = (typeof e.target === 'object' && e.target !== null) ? e.target.id : e.target;
-                            activeNodeIds.add(sourceId);
-                            activeNodeIds.add(targetId);
-                        }
+                    allowedEdges.forEach(e => {
+                        const sourceId = (typeof e.source === 'object' && e.source !== null) ? e.source.id : e.source;
+                        const targetId = (typeof e.target === 'object' && e.target !== null) ? e.target.id : e.target;
+                        activeNodeIds.add(sourceId);
+                        activeNodeIds.add(targetId);
                     });
                     
-                    if (activeNodeIds.size > 0) {
-                        this.nodes = rawNodes.filter(n => activeNodeIds.has(n.id));
-                        this.edges = rawEdges.filter(e => {
-                            const sourceId = (typeof e.source === 'object' && e.source !== null) ? e.source.id : e.source;
-                            const targetId = (typeof e.target === 'object' && e.target !== null) ? e.target.id : e.target;
-                            return activeNodeIds.has(sourceId) && activeNodeIds.has(targetId);
-                        });
-                    } else {
-                        // Fallback in case of no cross-interactions
-                        rawEdges.forEach(e => {
-                            const sourceId = (typeof e.source === 'object' && e.source !== null) ? e.source.id : e.source;
-                            const targetId = (typeof e.target === 'object' && e.target !== null) ? e.target.id : e.target;
-                            activeNodeIds.add(sourceId);
-                            activeNodeIds.add(targetId);
-                        });
-                        this.nodes = rawNodes.filter(n => activeNodeIds.has(n.id));
-                        this.edges = rawEdges;
-                    }
+                    this.nodes = allowedNodes.filter(n => activeNodeIds.has(n.id));
+                    this.edges = allowedEdges;
                     
                     this.setupSearchList();
                     this.draw();
@@ -2396,11 +2389,11 @@ foreach ($metricKeys as $key) {
     function initCard(type) {
         let config = {};
         if (type === 'dd') {
-            config = { accentColor: '#3b82f6', nodeTypes: ['drug', 'disease'], edgeTypes: ['dd', 'drdr', 'didi'] };
+            config = { accentColor: '#3b82f6', nodeTypes: ['drug', 'disease'], edgeTypes: ['dd'] };
         } else if (type === 'dp') {
-            config = { accentColor: '#f59e0b', nodeTypes: ['drug', 'protein'], edgeTypes: ['dp', 'drdr', 'prpr'] };
+            config = { accentColor: '#f59e0b', nodeTypes: ['drug', 'protein'], edgeTypes: ['dp'] };
         } else if (type === 'pd') {
-            config = { accentColor: '#ef4444', nodeTypes: ['protein', 'disease'], edgeTypes: ['pd', 'didi', 'prpr'] };
+            config = { accentColor: '#ef4444', nodeTypes: ['protein', 'disease'], edgeTypes: ['pd'] };
         }
         cardGraphs[type] = new BipartiteCardGraph(type, config);
         cardGraphs[type].init();
