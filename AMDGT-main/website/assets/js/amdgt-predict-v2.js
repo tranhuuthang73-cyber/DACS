@@ -484,15 +484,6 @@ function renderGNN3DGraph(predictions, type, queryIdx, batchResults) {
                         nodeSet.set(nodeKey, { name, type: predType, layer: 1, score: normScore, isQuery: false, isKnown: pred.is_known || false });
                     }
                     links.push({ source: qKey, target: nodeKey, weight: normScore });
-                    
-                    if (pred.linked_protein_idx !== undefined && pred.linked_protein_idx !== null) {
-                        const protKey = 'protein_' + pred.linked_protein_idx;
-                        if (!nodeSet.has(protKey)) {
-                            nodeSet.set(protKey, { name: pred.linked_protein_name || `Protein #${pred.linked_protein_idx}`, type: 'protein', layer: 1, score: normScore, isQuery: false });
-                        }
-                        links.push({ source: qKey, target: protKey, weight: normScore });
-                        links.push({ source: protKey, target: nodeKey, weight: normScore });
-                    }
                 }
             });
         });
@@ -551,15 +542,6 @@ function renderGNN3DGraph(predictions, type, queryIdx, batchResults) {
                     name, type: predType, layer: 1, score: normScore, isQuery: false, isKnown: pred.is_known || false
                 });
                 links.push({ source: 'query', target: predType + '_' + idx, weight: normScore });
-
-                if (pred.linked_protein_idx !== undefined && pred.linked_protein_idx !== null) {
-                    const protKey = 'protein_' + pred.linked_protein_idx;
-                    if (!nodeSet.has(protKey)) {
-                        nodeSet.set(protKey, { name: pred.linked_protein_name || `Protein #${pred.linked_protein_idx}`, type: 'protein', layer: 1, score: normScore, isQuery: false });
-                    }
-                    links.push({ source: 'query', target: protKey, weight: normScore });
-                    links.push({ source: protKey, target: predType + '_' + idx, weight: normScore });
-                }
             }
         });
     }

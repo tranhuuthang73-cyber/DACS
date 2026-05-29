@@ -457,19 +457,19 @@ if __name__ == '__main__':
     parser.add_argument('--k_fold', type=int, default=10, help='k-fold cross validation')
     parser.add_argument('--skip_folds', type=int, default=0, help='skip first N folds and resume from there')
     parser.add_argument('--epochs', type=int, default=1000, help='number of epochs to train')
-    parser.add_argument('--lr', type=float, default=1e-4, help='learning rate')
-    parser.add_argument('--weight_decay', type=float, default=1e-3, help='weight_decay')
+    parser.add_argument('--lr', type=float, default=0.0005, help='learning rate')
+    parser.add_argument('--weight_decay', type=float, default=0.0001, help='weight_decay')
     parser.add_argument('--random_seed', type=int, default=1234, help='random seed')
     parser.add_argument('--neighbor', type=int, default=20, help='neighbor')
     parser.add_argument('--negative_rate', type=float, default=1.0, help='negative_rate')
-    parser.add_argument('--dataset', default='B-dataset', help='dataset')
+    parser.add_argument('--dataset', default='F-dataset', help='dataset')
     parser.add_argument('--dropout', default=0.2, type=float, help='dropout')
     parser.add_argument('--gt_layer', default=2, type=int, help='graph transformer layer')
     parser.add_argument('--gt_head', default=2, type=int, help='graph transformer head')
     parser.add_argument('--gt_out_dim', default=200, type=int, help='graph transformer output dimension')
-    parser.add_argument('--hgt_layer', default=2, type=int, help='heterogeneous graph transformer layer')
+    parser.add_argument('--hgt_layer', default=3, type=int, help='heterogeneous graph transformer layer')
     parser.add_argument('--hgt_head', default=8, type=int, help='heterogeneous graph transformer head')
-    parser.add_argument('--hgt_in_dim', default=64, type=int, help='heterogeneous graph transformer input dimension')
+    parser.add_argument('--hgt_in_dim', default=128, type=int, help='heterogeneous graph transformer input dimension')
     parser.add_argument('--hgt_head_dim', default=25, type=int, help='heterogeneous graph transformer head dimension')
     parser.add_argument('--hgt_out_dim', default=200, type=int, help='heterogeneous graph transformer output dimension')
     parser.add_argument('--tr_layer', default=2, type=int, help='transformer layer')
@@ -477,7 +477,7 @@ if __name__ == '__main__':
     parser.add_argument('--show_plot', action='store_true', help='show summary plot window at the end')
     
     # Improved-specific args
-    parser.add_argument('--version', default='v15', choices=['v1', 'v2', 'v3', 'v4', 'v5', 'v7', 'v8', 'v9', 'v10', 'v11', 'v12', 'v13', 'v14', 'v15', 'v16', 'v17', 'v18', 'v19', 'v20', 'v21', 'v22', 'v23', 'v24', 'v25', 'v26', 'v27', 'v28', 'v29', 'v30', 'v31', 'v32', 'v33', 'v34', 'v35', 'v36', 'v37', 'v38', 'v39', 'v40', 'v41', 'v42', 'v43', 'v44', 'v45', 'v46', 'v47', 'v48', 'v49', 'v50', 'v51', 'v52', 'v53'],
+    parser.add_argument('--version', default='v2', choices=['v1', 'v2', 'v3', 'v4', 'v5', 'v7', 'v8', 'v9', 'v10', 'v11', 'v12', 'v13', 'v14', 'v15', 'v16', 'v17', 'v18', 'v19', 'v20', 'v21', 'v22', 'v23', 'v24', 'v25', 'v26', 'v27', 'v28', 'v29', 'v30', 'v31', 'v32', 'v33', 'v34', 'v35', 'v36', 'v37', 'v38', 'v39', 'v40', 'v41', 'v42', 'v43', 'v44', 'v45', 'v46', 'v47', 'v48', 'v49', 'v50', 'v51', 'v52', 'v53'],
                         help='improvement version')
     parser.add_argument('--label_smoothing', type=float, default=0.0, help='label smoothing rate (0 = same as baseline)')
     parser.add_argument('--patience', type=int, default=120, help='patience for early stopping')

@@ -26,9 +26,12 @@ DEFAULT_CONFIGS = [
     {
         "name": "final_optimized_config",
         "args": [
-            "--neighbor", "5",
+            "--neighbor", "20",
             "--dropout", "0.30",
-            "--weight_decay", "5e-4",
+            "--lr", "0.0005",
+            "--weight_decay", "0.0001",
+            "--hgt_layer", "3",
+            "--hgt_in_dim", "128",
             "--loss_type", "ce",
             "--hetero_graph_mode", "full",
             "--select_metric", "min_discrete",
@@ -70,7 +73,7 @@ def read_deltas(comparison_csv):
 
 
 def find_latest_log(log_dir, started_at):
-    logs = sorted(log_dir.glob("train_v1_*.log"), key=lambda p: p.stat().st_mtime, reverse=True)
+    logs = sorted(log_dir.glob("train_v2_*.log"), key=lambda p: p.stat().st_mtime, reverse=True)
     if not logs:
         return None
     for log in logs:
@@ -79,11 +82,11 @@ def find_latest_log(log_dir, started_at):
     return logs[0]
 
 
-def find_overall_best_pt(v1_dir):
-    pt_path = v1_dir / "overall_best_model.pt"
+def find_overall_best_pt(v2_dir):
+    pt_path = v2_dir / "overall_best_model.pt"
     if pt_path.exists():
         return pt_path
-    for fold_dir in sorted(v1_dir.glob("fold_*")):
+    for fold_dir in sorted(v2_dir.glob("fold_*")):
         pt_path = fold_dir / "best_model.pt"
         if pt_path.exists():
             return pt_path
@@ -104,12 +107,12 @@ def write_csv(path, rows):
         writer.writerows(rows)
 
 
-def run_one(cfg, args, repo_root, v1_dir, run_dir):
+def run_one(cfg, args, repo_root, v2_dir, run_dir):
     cmd = [
         sys.executable,
         "train_DDA_improved_B.py",
         "--dataset", "B-dataset",
-        "--version", "v1",
+        "--version", "v2",
         "--epochs", str(args.epochs),
         "--k_fold", str(args.k_fold),
         "--patience", str(args.patience),
@@ -124,16 +127,16 @@ def run_one(cfg, args, repo_root, v1_dir, run_dir):
     proc = subprocess.run(cmd, cwd=repo_root)
     duration = time.time() - started_at
 
-    log_path = find_latest_log(v1_dir, started_at)
-    src_summary = v1_dir / "summary_v1.csv"
-    src_comparison = v1_dir / "comparison_v1.csv"
-    src_plot = v1_dir / "fold_summary_v1.png"
-    src_pt = find_overall_best_pt(v1_dir)
+    log_path = find_latest_log(v2_dir, started_at)
+    src_summary = v2_dir / "summary_v2.csv"
+    src_comparison = v2_dir / "comparison_v2.csv"
+    src_plot = v2_dir / "fold_summary_v2.png"
+    src_pt = find_overall_best_pt(v2_dir)
 
     copy_if_exists(log_path, run_dir / (log_path.name if log_path else "train.log"))
-    copy_if_exists(src_summary, run_dir / "summary_v1.csv")
-    copy_if_exists(src_comparison, run_dir / "comparison_v1.csv")
-    copy_if_exists(src_plot, run_dir / "fold_summary_v1.png")
+    copy_if_exists(src_summary, run_dir / "summary_v2.csv")
+    copy_if_exists(src_comparison, run_dir / "comparison_v2.csv")
+    copy_if_exists(src_plot, run_dir / "fold_summary_v2.png")
 
     if src_pt and src_pt.exists():
         shutil.copy2(src_pt, run_dir / "best_model.pt")
@@ -151,8 +154,8 @@ def run_one(cfg, args, repo_root, v1_dir, run_dir):
         "pass_all": False,
     }
 
-    cmp_copy = run_dir / "comparison_v1.csv"
-    sum_copy = run_dir / "summary_v1.csv"
+    cmp_copy = run_dir / "comparison_v2.csv"
+    sum_copy = run_dir / "summary_v2.csv"
     if proc.returncode == 0 and cmp_copy.exists() and sum_copy.exists():
         means = read_mean_metrics(sum_copy)
         deltas = read_deltas(cmp_copy)
@@ -198,19 +201,18 @@ def main():
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parent
-    v1_dir = repo_root / "Result" / "B-dataset" / "AMNTDDA_improved" / "V1"
-    if not v1_dir.exists():
-        raise FileNotFoundError(f"Missing path: {v1_dir}")
+    v2_dir = repo_root / "Result" / "B-dataset" / "AMNTDDA_improved" / "V2"
+    v2_dir.mkdir(parents=True, exist_ok=True)
 
     session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-    sweep_dir = v1_dir / "sweep_runs" / session_id
+    sweep_dir = v2_dir / "sweep_runs" / session_id
     sweep_dir.mkdir(parents=True, exist_ok=True)
 
     # Backup current artifacts
     backup_dir = sweep_dir / "pre_sweep_backup"
     backup_dir.mkdir(parents=True, exist_ok=True)
-    for artifact in ["summary.csv", "summary_v1.csv", "comparison_v1.csv", "fold_summary_v1.png", "overall_best_model.pt"]:
-        src = v1_dir / artifact
+    for artifact in ["summary.csv", "summary_v2.csv", "comparison_v2.csv", "fold_summary_v2.png", "overall_best_model.pt"]:
+        src = v2_dir / artifact
         if src.exists():
             shutil.copy2(src, backup_dir / artifact)
 
@@ -233,9 +235,9 @@ def main():
         cfg = configs[0]
         run_dir = sweep_dir / f"loop{loop_idx:02d}_{cfg['name']}"
         run_dir.mkdir(parents=True, exist_ok=True)
-        result = run_one(cfg, args, repo_root, v1_dir, run_dir)
+        result = run_one(cfg, args, repo_root, v2_dir, run_dir)
 
-        # Update V1 artifacts if this run is better
+        # Update V2 artifacts if this run is better
         if result["return_code"] == 0 and result["delta_auc"] is not None:
             curr_score = min(
                 result["delta_auc"] or 0, result["delta_aupr"] or 0,
@@ -251,13 +253,13 @@ def main():
                 )
             if curr_score > prev_score:
                 best_result = result
-                print(f"  -> Updating V1 artifacts with better run...")
-                for artifact in ["summary_v1.csv", "comparison_v1.csv", "fold_summary_v1.png", "best_model.pt"]:
+                print(f"  -> Updating V2 artifacts with better run...")
+                for artifact in ["summary_v2.csv", "comparison_v2.csv", "fold_summary_v2.png", "best_model.pt"]:
                     src = run_dir / artifact
                     if src.exists():
-                        shutil.copy2(src, v1_dir / artifact)
-                if (run_dir / "summary_v1.csv").exists():
-                    shutil.copy2(run_dir / "summary_v1.csv", v1_dir / "summary.csv")
+                        shutil.copy2(src, v2_dir / artifact)
+                if (run_dir / "summary_v2.csv").exists():
+                    shutil.copy2(run_dir / "summary_v2.csv", v2_dir / "summary.csv")
 
         if result["pass_all"]:
             passed = True
@@ -277,13 +279,13 @@ def main():
         print(f"  AUC: {best_result['mean_auc']:.4f} (delta: {best_result['delta_auc']})")
         print(f"  AUPR: {best_result['mean_aupr']:.4f} (delta: {best_result['delta_aupr']})")
         print(f"  F1: {best_result['delta_f1']} | MCC: {best_result['delta_mcc']}")
-        print(f"  Model: {v1_dir / 'best_model.pt'}")
+        print(f"  Model: {v2_dir / 'best_model.pt'}")
     else:
         # Restore backup if no valid run
-        for artifact in ["summary.csv", "summary_v1.csv", "comparison_v1.csv", "fold_summary_v1.png", "overall_best_model.pt"]:
+        for artifact in ["summary.csv", "summary_v2.csv", "comparison_v2.csv", "fold_summary_v2.png", "overall_best_model.pt"]:
             src = backup_dir / artifact
             if src.exists():
-                shutil.copy2(src, v1_dir / artifact)
+                shutil.copy2(src, v2_dir / artifact)
         print("\nNo valid run completed successfully.")
 
     print(f"\nSaved sweep artifacts to: {sweep_dir}")
