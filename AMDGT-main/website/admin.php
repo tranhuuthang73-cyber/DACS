@@ -473,11 +473,26 @@ function loadLogs() {
                     ? `<span style="padding:4px 8px; border-radius:6px; background:rgba(129,140,248,0.2); color:#818cf8; font-size:0.8rem; font-weight:bold;"><i class="fas fa-pills"></i> T->B</span>` 
                     : `<span style="padding:4px 8px; border-radius:6px; background:rgba(52,211,153,0.2); color:#34d399; font-size:0.8rem; font-weight:bold;"><i class="fas fa-virus"></i> B->T</span>`;
 
+                let uniqueDrugs = new Set();
+                let uniqueDiseases = new Set();
+                resultsData.forEach(r => {
+                    if (r.drug_id) uniqueDrugs.add(r.drug_id);
+                    else if (r.drug_name) uniqueDrugs.add(r.drug_name);
+                    if (r.disease_id) uniqueDiseases.add(r.disease_id);
+                    else if (r.disease_name) uniqueDiseases.add(r.disease_name);
+                });
+                let dCount = uniqueDrugs.size;
+                let dsCount = uniqueDiseases.size;
+                if (l.query_type === 'drug_to_disease') dCount = Math.max(1, dCount);
+                if (l.query_type === 'disease_to_drug') dsCount = Math.max(1, dsCount);
+
+                let kqDisplay = `<span style="color:#818cf8; font-weight:bold;" title="Số lượng Thuốc">${dCount} <i class="fas fa-pills" style="font-size:0.85em"></i></span> <span style="color:var(--text-muted); margin:0 4px;">-</span> <span style="color:#34d399; font-weight:bold;" title="Số lượng Bệnh">${dsCount} <i class="fas fa-virus" style="font-size:0.85em"></i></span>`;
+
                 html += `<tr>
                 <td style="font-weight:bold;"><i class="fas fa-user-circle" style="color:var(--text-muted)"></i> ${l.username}</td>
                 <td>${typeBadge}</td>
                 <td style="font-weight:bold; color:var(--text-primary);">${l.query_value}</td>
-                <td>${count} <i class="fas fa-list" style="color:var(--text-muted);font-size:0.8em"></i></td>
+                <td style="white-space: nowrap;">${kqDisplay}</td>
                 <td style="font-size:0.85rem; color:var(--text-muted);">${l.created_at}</td>
                 <td style="text-align:right; white-space: nowrap;">${btnDetails}${btnDelete}</td>
                 </tr>`;

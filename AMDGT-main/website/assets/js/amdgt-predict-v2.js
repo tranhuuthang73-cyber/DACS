@@ -1119,12 +1119,13 @@ async function predictCombined() {
     const enteredDiseaseIdxs = new Set(diseaseItems.map(d => d.idx));
 
     // Chỉ chạy drug→disease, lọc ra chỉ những bệnh đã nhập
+    const filterDiseaseIdxs = Array.from(enteredDiseaseIdxs).map(idx => parseInt(idx));
     for (const item of drugItems) {
         try {
             const data = await fetchPrediction('api/predict.php',
-                { type: 'drug_to_disease', drug_idx: item.idx, top_k: LARGE_TOP_K, dataset: item.dataset },
+                { type: 'drug_to_disease', drug_idx: item.idx, top_k: LARGE_TOP_K, dataset: item.dataset, filter_disease_idxs: filterDiseaseIdxs },
                 'api/proxy.php?action=predict_drug',
-                { drug_idx: item.idx, top_k: LARGE_TOP_K, dataset: item.dataset }
+                { drug_idx: item.idx, top_k: LARGE_TOP_K, dataset: item.dataset, filter_disease_idxs: filterDiseaseIdxs }
             );
             if (data && data.predictions) {
                 // Filter: chỉ giữ lại những bệnh mà user đã nhập

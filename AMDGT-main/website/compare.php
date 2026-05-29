@@ -2890,9 +2890,7 @@ foreach ($metricKeys as $key) {
                     <button class="viz-tab-btn active" id="btn-assoc-dd" onclick="switchAssocTab('dd')" style="margin-bottom: 0;">Drug - Disease</button>
                     <button class="viz-tab-btn" id="btn-assoc-dp" onclick="switchAssocTab('dp')" style="margin-bottom: 0;">Drug - Protein</button>
                     <button class="viz-tab-btn" id="btn-assoc-pd" onclick="switchAssocTab('pd')" style="margin-bottom: 0;">Disease - Protein</button>
-                    <button class="viz-tab-btn" id="btn-assoc-drdr" onclick="switchAssocTab('drdr')" style="margin-bottom: 0;">Drug - Drug</button>
-                    <button class="viz-tab-btn" id="btn-assoc-didi" onclick="switchAssocTab('didi')" style="margin-bottom: 0;">Disease - Disease</button>
-                    <button class="viz-tab-btn" id="btn-assoc-prpr" onclick="switchAssocTab('prpr')" style="margin-bottom: 0;">Protein - Protein</button>
+
                 </div>
             </div>
         </div>
@@ -2939,9 +2937,7 @@ foreach ($metricKeys as $key) {
         document.getElementById('btn-assoc-dd').classList.toggle('active', tab === 'dd');
         document.getElementById('btn-assoc-dp').classList.toggle('active', tab === 'dp');
         document.getElementById('btn-assoc-pd').classList.toggle('active', tab === 'pd');
-        document.getElementById('btn-assoc-drdr').classList.toggle('active', tab === 'drdr');
-        document.getElementById('btn-assoc-didi').classList.toggle('active', tab === 'didi');
-        document.getElementById('btn-assoc-prpr').classList.toggle('active', tab === 'prpr');
+
 
         const thSource = document.getElementById('assoc-th-source');
         const thTarget = document.getElementById('assoc-th-target');
@@ -2954,15 +2950,6 @@ foreach ($metricKeys as $key) {
         } else if (tab === 'pd') {
             thSource.innerText = 'Source (Protein)';
             thTarget.innerText = 'Target (Disease)';
-        } else if (tab === 'drdr') {
-            thSource.innerText = 'Source (Drug)';
-            thTarget.innerText = 'Target (Drug)';
-        } else if (tab === 'didi') {
-            thSource.innerText = 'Source (Disease)';
-            thTarget.innerText = 'Target (Disease)';
-        } else if (tab === 'prpr') {
-            thSource.innerText = 'Source (Protein)';
-            thTarget.innerText = 'Target (Protein)';
         }
 
         loadAssociations();
@@ -3007,15 +2994,6 @@ foreach ($metricKeys as $key) {
             } else if (currentAssocTab === 'pd') {
                 sourceColor = '#f59e0b';
                 targetColor = '#ef4444';
-            } else if (currentAssocTab === 'drdr') {
-                sourceColor = '#3b82f6';
-                targetColor = '#3b82f6';
-            } else if (currentAssocTab === 'didi') {
-                sourceColor = '#ef4444';
-                targetColor = '#ef4444';
-            } else if (currentAssocTab === 'prpr') {
-                sourceColor = '#f59e0b';
-                targetColor = '#f59e0b';
             }
 
             tr.innerHTML = `
@@ -3029,9 +3007,7 @@ foreach ($metricKeys as $key) {
         let tabName = 'Drug - Disease';
         if (currentAssocTab === 'dp') tabName = 'Drug - Protein';
         if (currentAssocTab === 'pd') tabName = 'Disease - Protein';
-        if (currentAssocTab === 'drdr') tabName = 'Drug - Drug';
-        if (currentAssocTab === 'didi') tabName = 'Disease - Disease';
-        if (currentAssocTab === 'prpr') tabName = 'Protein - Protein';
+
         document.getElementById('assoc-description').innerText = `Hiển thị danh sách các nối ${tabName} (Tổng số: ${totalAssocCount.toLocaleString()})`;
     }
 

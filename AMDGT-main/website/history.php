@@ -59,11 +59,26 @@ $history = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <?php endif; ?>
                         </td>
                         <td style="padding: 1.2rem;"><strong style="font-size: 1.05rem; color: var(--text-primary);"><?= htmlspecialchars($h['query_value']) ?></strong></td>
-                        <td style="padding: 1.2rem;">
+                        <td style="padding: 1.2rem; white-space: nowrap;">
                             <?php 
                             $results = json_decode($h['results'], true);
                             $count = is_array($results) ? count($results) : 0;
-                            echo "<span style='font-weight: bold; color: var(--text-secondary);'>$count</span> kết quả";
+                            $uniqueDrugs = [];
+                            $uniqueDiseases = [];
+                            if (is_array($results)) {
+                                foreach ($results as $r) {
+                                    if (!empty($r['drug_id'])) $uniqueDrugs[$r['drug_id']] = true;
+                                    elseif (!empty($r['drug_name'])) $uniqueDrugs[$r['drug_name']] = true;
+                                    
+                                    if (!empty($r['disease_id'])) $uniqueDiseases[$r['disease_id']] = true;
+                                    elseif (!empty($r['disease_name'])) $uniqueDiseases[$r['disease_name']] = true;
+                                }
+                            }
+                            $dCount = count($uniqueDrugs);
+                            $dsCount = count($uniqueDiseases);
+                            if ($h['query_type'] === 'drug_to_disease') $dCount = max(1, $dCount);
+                            if ($h['query_type'] === 'disease_to_drug') $dsCount = max(1, $dsCount);
+                            echo "<span style='color:#818cf8; font-weight:bold;' title='Số lượng Thuốc'>{$dCount} <i class='fas fa-pills' style='font-size:0.85em'></i></span> <span style='color:var(--text-muted); margin:0 4px;'>-</span> <span style='color:#34d399; font-weight:bold;' title='Số lượng Bệnh'>{$dsCount} <i class='fas fa-virus' style='font-size:0.85em'></i></span>";
                             ?>
                         </td>
                         <td style="padding: 1.2rem; color: var(--text-muted); font-size: 0.85rem;">

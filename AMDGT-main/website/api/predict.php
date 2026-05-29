@@ -792,6 +792,18 @@ if ($type === 'drug_to_disease') {
     $dataDir = __DIR__ . "/../../data/$dataset/";
     $predictions = getCSVBasedPredictions($dataDir, 'drug', $drugIdx, $topK);
 
+    $filterDiseaseIdxs = $input['filter_disease_idxs'] ?? null;
+    if (is_array($filterDiseaseIdxs)) {
+        $filtered = [];
+        $filterSet = array_map('intval', $filterDiseaseIdxs);
+        foreach ($predictions as $p) {
+            if (in_array(intval($p['disease_idx']), $filterSet, true)) {
+                $filtered[] = $p;
+            }
+        }
+        $predictions = $filtered;
+    }
+
     dbExec($db, "INSERT INTO predictions (user_id, dataset, query_type, query_value, results) VALUES (?, ?, ?, ?, ?)",
         [$_SESSION['user_id'], $dataset, 'drug_to_disease', $queryName, json_encode($predictions)]);
 
@@ -811,6 +823,18 @@ if ($type === 'drug_to_disease') {
 
     $dataDir = __DIR__ . "/../../data/$dataset/";
     $predictions = getCSVBasedPredictions($dataDir, 'disease', $diseaseIdx, $topK);
+
+    $filterDrugIdxs = $input['filter_drug_idxs'] ?? null;
+    if (is_array($filterDrugIdxs)) {
+        $filtered = [];
+        $filterSet = array_map('intval', $filterDrugIdxs);
+        foreach ($predictions as $p) {
+            if (in_array(intval($p['drug_idx']), $filterSet, true)) {
+                $filtered[] = $p;
+            }
+        }
+        $predictions = $filtered;
+    }
 
     dbExec($db, "INSERT INTO predictions (user_id, dataset, query_type, query_value, results) VALUES (?, ?, ?, ?, ?)",
         [$_SESSION['user_id'], $dataset, 'disease_to_drug', $queryName, json_encode($predictions)]);
