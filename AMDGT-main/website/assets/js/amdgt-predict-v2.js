@@ -619,18 +619,6 @@ function renderGNN3DGraph(predictions, type, queryIdx, batchResults) {
                 .nodeOpacity(1)
                 .nodeResolution(24)
                 .nodeLabel(n => `<div style="background:rgba(15,23,42,0.95);padding:10px 16px;border-radius:10px;border:2px solid ${colorMap[n.type]};font-family:'Segoe UI',sans-serif;"><div style="color:#fff;font-weight:700;font-size:15px;margin-bottom:4px;">${n.name}${n.isQuery ? ' ⭐' : ''}</div><div style="color:${colorMap[n.type]};font-size:12px;font-weight:700;">${n.type === 'drug' ? 'THUỐC' : n.type === 'disease' ? 'BỆNH' : 'PROTEIN'} • ${((n.score || 0) * 100).toFixed(0)}%</div></div>`)
-                .nodeThreeObject(n => {
-                    if (typeof SpriteText === 'undefined') return false;
-                    const shortName = n.name.length > 15 ? n.name.substring(0, 13) + '..' : n.name;
-                    const label = new SpriteText(shortName);
-                    label.color = '#ffffff';
-                    label.textHeight = n.isQuery ? 5 : 3;
-                    label.backgroundColor = colorMap[n.type] + 'CC';
-                    label.padding = 2;
-                    label.borderRadius = 3;
-                    return label;
-                })
-                .nodeThreeObjectExtend(true)
                 .linkColor(() => 'rgba(45,212,191,0.3)')
                 .linkWidth(0.8)
                 .linkDirectionalParticles(1)
