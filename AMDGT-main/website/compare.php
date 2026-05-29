@@ -1235,9 +1235,6 @@ foreach ($metricKeys as $key) {
                         <td><?= number_format($s['dd']) ?></td>
                         <td><?= number_format($s['dp']) ?></td>
                         <td><?= number_format($s['pd']) ?></td>
-                        <td><?= number_format($s['drdr']) ?></td>
-                        <td><?= number_format($s['didi']) ?></td>
-                        <td><?= number_format($s['prpr']) ?></td>
                         <td><?= $s['sparsity'] ?></td>
                     </tr>
                     <?php endforeach; ?>
@@ -1270,7 +1267,7 @@ foreach ($metricKeys as $key) {
                     ?>
                     <tr style="<?= $dsName === $selectedDataset ? 'background: rgba(0,255,136,0.05);' : '' ?>">
                         <td><strong><?= htmlspecialchars($dsName) ?></strong></td>
-                        <?php foreach (['drugs','diseases','proteins','dd','dp','pd','drdr','didi','prpr'] as $col): 
+                        <?php foreach (['drugs','diseases','proteins','dd','dp','pd'] as $col): 
                             $diff = $s[$col] - $orig[$col];
                         ?>
                         <td>
