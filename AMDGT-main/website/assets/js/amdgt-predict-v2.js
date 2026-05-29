@@ -700,7 +700,7 @@ function renderGNN3DGraph(predictions, type, queryIdx, batchResults) {
             for (let gi = 0; gi < batchResults.length; gi++) {
                 const result = batchResults[gi];
                 const qKey = 'query_' + gi;
-                const targets = result.predictions.map(p => type === 'drug' ? (p.disease_idx || p.drug_idx) : (p.drug_idx || p.disease_idx)).join(',');
+                const targets = result.predictions.map(p => type === 'drug' ? (p.disease_idx ?? p.drug_idx) : (p.drug_idx ?? p.disease_idx)).join(',');
                 const ds = result.dataset || 'C-dataset';
                 try {
                     const res = await fetch(`api/proxy.php?action=bulk_pathway&query_type=${type}&query_idx=${result.queryIdx}&targets=${targets}&dataset=${ds}`);
@@ -712,7 +712,7 @@ function renderGNN3DGraph(predictions, type, queryIdx, batchResults) {
         })();
     } else {
         // Single mode: enrich with pathway proteins
-        const targets = predictions.map(p => type === 'drug' ? (p.disease_idx || p.drug_idx) : (p.drug_idx || p.disease_idx)).join(',');
+        const targets = predictions.map(p => type === 'drug' ? (p.disease_idx ?? p.drug_idx) : (p.drug_idx ?? p.disease_idx)).join(',');
         const dataset = document.getElementById(type + '-dataset')?.value || 'C-dataset';
 
         fetch(`api/proxy.php?action=bulk_pathway&query_type=${type}&query_idx=${queryIdx}&targets=${targets}&dataset=${dataset}`)
