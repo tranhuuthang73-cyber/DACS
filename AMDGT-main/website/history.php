@@ -272,10 +272,35 @@ function viewDetails(queryValue, queryType, results) {
     
     // Render kết quả
     let html = '';
-    const isProtein = queryType === 'protein_to_any';
-    const type = queryType === 'drug_to_disease' ? 'disease' : 'drug';
     
-    results.forEach((p, i) => {
+    if (queryType === 'clinical_abstract') {
+        const abstractText = results.abstract || '';
+        const score = results.score || 0;
+        
+        let formattedAbstract = abstractText
+            .replace(/\n/g, '<br>')
+            .replace(/### (.*)/g, '<h4 style="color: #818cf8; margin-top: 15px; margin-bottom: 5px;">$1</h4>')
+            .replace(/## (.*)/g, '<h3 style="color: #c084fc; margin-top: 20px; margin-bottom: 10px;">$1</h3>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+        html = `
+            <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; color: var(--text-primary); line-height: 1.6; font-size: 0.95rem;">
+                <div style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-weight: 700; color: #fbbf24;"><i class="fas fa-robot"></i> MedBot Abstract</span>
+                    <span style="background: rgba(99, 102, 241, 0.15); color: #818cf8; padding: 4px 10px; border-radius: 8px; font-weight: bold; font-size: 0.8rem;">Độ tin cậy: ${score}%</span>
+                </div>
+                <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem;">
+                    ${formattedAbstract}
+                </div>
+            </div>
+        `;
+    } else {
+        const isProtein = queryType === 'protein_to_any';
+        const type = queryType === 'drug_to_disease' ? 'disease' : 'drug';
+        const items = Array.isArray(results) ? results : [];
+        
+        items.forEach((p, i) => {
         let name, id;
         if (isProtein) {
             // Protein pathways: show Drug → Protein → Disease
@@ -321,7 +346,8 @@ function viewDetails(queryValue, queryType, results) {
                 ${badge}
             </div>
         `;
-    });
+        });
+    }
     
     content.innerHTML = html;
     

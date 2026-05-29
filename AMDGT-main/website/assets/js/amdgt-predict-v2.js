@@ -396,17 +396,17 @@ function switchVizTab(btn, tab) {
     document.querySelectorAll('.viz-panel').forEach(p => p.classList.remove('active'));
     const targetPanel = document.getElementById('panel-' + tab);
     if (targetPanel) targetPanel.classList.add('active');
-    // Only re-render 3D if switching TO 3d tab AND graph is NOT currently being built
-    if (tab === '3d' && window.currentGNNData && !window._gnn3dRendering) {
-        // Don't re-render if it was just rendered (< 5 seconds ago)
-        const now = Date.now();
-        if (!window._gnn3dLastRender || (now - window._gnn3dLastRender) > 5000) {
-            setTimeout(() => {
-                if (typeof renderGNN3DGraph === 'function') {
-                    renderGNN3DGraph(window.currentGNNData, window.currentGNNType, window.currentGNNIdx, window.currentGNNBatch);
-                }
-            }, 100);
-        }
+    
+    // Always trigger dual 3D re-render when switching to 3d tab to ensure correct dimensions
+    if (tab === '3d' && window.currentGNNData) {
+        setTimeout(() => {
+            const queryIdx = window.currentGNNIdx || 0;
+            const queryName = document.getElementById(window.currentGNNType + '-search')?.value 
+                || (window.currentGNNBatch && window.currentGNNBatch.map(r => r.queryName).join(', ')) 
+                || `Result #${queryIdx}`;
+            const dataset = document.getElementById('global-dataset')?.value || window.currentDataset || 'C-dataset';
+            renderDualComparison(window.currentGNNData, window.currentGNNType, queryIdx, window.currentGNNBatch, queryName, dataset);
+        }, 150);
     }
 }
 
@@ -414,6 +414,8 @@ function switchVizTab(btn, tab) {
 window.currentGNNData = null;
 window.currentGNNType = null;
 window.currentGNNIdx = null;
+let improvedGraphInstance = null;
+let gnn3dGeneration = 0;
 
 function renderGNN3DGraph(predictions, type, queryIdx, batchResults) {
     window.currentGNNData = predictions;
@@ -422,8 +424,20 @@ function renderGNN3DGraph(predictions, type, queryIdx, batchResults) {
     window.currentGNNBatch = batchResults || null;
     window._gnn3dLastRender = Date.now();
 
+    const myGen = ++gnn3dGeneration;
+
     const container = document.getElementById('3d-graph-container-improved');
     if (!container) return;
+
+    // Guard both offsetWidth and offsetHeight to prevent degenerated WebGL camera projection matrices (aspect ratio = 0/0 = NaN)
+    if (!container.offsetWidth || container.offsetWidth < 50 || !container.offsetHeight || container.offsetHeight < 50) {
+        setTimeout(() => {
+            if (myGen === gnn3dGeneration) {
+                renderGNN3DGraph(predictions, type, queryIdx, batchResults);
+            }
+        }, 100);
+        return;
+    }
 
     // Show loading
     container.innerHTML = `
@@ -548,6 +562,7 @@ function renderGNN3DGraph(predictions, type, queryIdx, batchResults) {
 
     // Helper to render graph from nodeSet and links
     function buildAndRenderGraph() {
+        if (myGen !== gnn3dGeneration) return;
         const allNodes = Array.from(nodeSet.entries()).map(([key, val]) => ({ id: key, ...val }));
         // Limit: query nodes + top 10 predictions + proteins
         const queryNodes = allNodes.filter(n => n.isQuery);
@@ -589,10 +604,14 @@ function renderGNN3DGraph(predictions, type, queryIdx, batchResults) {
         if (typeof ForceGraph3D !== 'undefined' && canvasEl) {
             const colorMap = { drug: '#60a5fa', disease: '#f87171', protein: '#fbbf24' };
 
+            if (improvedGraphInstance) {
+                try { improvedGraphInstance._destructor && improvedGraphInstance._destructor(); } catch (e) { }
+            }
+
             const Graph = ForceGraph3D()(canvasEl)
                 .graphData({ nodes: nodes, links: uniqueLinks })
-                .width(canvasEl.offsetWidth)
-                .height(canvasEl.offsetHeight)
+                .width(width)
+                .height(height)
                 .backgroundColor('rgba(0,0,0,0)')
                 .nodeId('id')
                 .nodeVal(n => n.isQuery ? 8 : (n.type === 'protein' ? 2 : 4))
@@ -623,8 +642,8 @@ function renderGNN3DGraph(predictions, type, queryIdx, batchResults) {
                     showToast(`${node.type === 'drug' ? '💊' : node.type === 'disease' ? '🦠' : '🧬'} ${node.name} (${((node.score || 0) * 100).toFixed(1)}%)`, 'info');
                 });
 
-            Graph.d3Force('charge').strength(-40);
-            Graph.d3Force('link').distance(30);
+            Graph.d3Force('charge').strength(-60);
+            Graph.d3Force('link').distance(40);
 
             // Clean 3-column layout: Drug | Protein | Disease
             let tickCount = 0;
@@ -645,10 +664,11 @@ function renderGNN3DGraph(predictions, type, queryIdx, batchResults) {
                 disn.forEach((n, i) => { n.fx = 60; n.fy = disn.length === 1 ? 0 : (i - (disn.length - 1) / 2) * disStep; n.fz = 0; });
 
                 // CENTER: Proteins
-                pn.forEach((n) => { 
+                const pStep = Math.min(12, 100 / Math.max(pn.length - 1, 1));
+                pn.forEach((n, i) => { 
                     n.fx = 0; 
+                    n.fy = pn.length === 1 ? 0 : (i - (pn.length - 1) / 2) * pStep;
                     n.fz = 0;
-                    // Bỏ gán n.fy để các protein tự động dàn trải dựa trên lực đẩy
                 });
             });
 
@@ -668,7 +688,12 @@ function renderGNN3DGraph(predictions, type, queryIdx, batchResults) {
                 }
             }, 1000);
 
-            window.addEventListener('resize', () => { if (canvasEl.offsetWidth) Graph.width(canvasEl.offsetWidth).height(canvasEl.offsetHeight); });
+            improvedGraphInstance = Graph;
+            window.addEventListener('resize', () => {
+                const newW = container.offsetWidth || width;
+                const newH = container.offsetHeight || height;
+                Graph.width(newW).height(newH);
+            });
         } else {
             canvasEl.innerHTML = '<div style="color:#f87171;text-align:center;padding:3rem;">Thư viện 3D Force Graph chưa tải được. Vui lòng F5 lại trang.</div>';
         }
@@ -692,38 +717,72 @@ function renderGNN3DGraph(predictions, type, queryIdx, batchResults) {
         });
     }
 
-    // For protein type, skip bulk_pathway (we already have all nodes from predictions)
+    // Caching mechanism for GNN pathway data to avoid duplicate requests during tab switching
+    const targets = predictions.map(p => type === 'drug' ? (p.disease_idx ?? p.drug_idx) : (p.drug_idx ?? p.disease_idx)).join(',');
+    const dataset = document.getElementById(type + '-dataset')?.value || window.currentDataset || 'C-dataset';
+    
     if (type === 'protein') {
         buildAndRenderGraph();
     } else if (batchResults && batchResults.length > 0) {
-        (async () => {
-            for (let gi = 0; gi < batchResults.length; gi++) {
-                const result = batchResults[gi];
+        const batchKeys = batchResults.map(r => r.queryIdx).join(',');
+        const cacheKey = `batch_${type}_${batchKeys}_${dataset}`;
+        
+        if (window._cachedPathwayKey === cacheKey && window._cachedPathwayData) {
+            console.log('[3D] Using cached batch pathway data');
+            if (myGen !== gnn3dGeneration) return;
+            window._cachedPathwayData.forEach((data, gi) => {
                 const qKey = 'query_' + gi;
-                const targets = result.predictions.map(p => type === 'drug' ? (p.disease_idx ?? p.drug_idx) : (p.drug_idx ?? p.disease_idx)).join(',');
-                const ds = result.dataset || 'C-dataset';
-                try {
-                    const res = await fetch(`api/proxy.php?action=bulk_pathway&query_type=${type}&query_idx=${result.queryIdx}&targets=${targets}&dataset=${ds}`);
-                    const data = await res.json();
-                    processPathwayData(data, qKey);
-                } catch (err) { console.error(`Batch pathway error for ${result.queryName}:`, err); }
-            }
-            buildAndRenderGraph();
-        })();
-    } else {
-        // Single mode: enrich with pathway proteins
-        const targets = predictions.map(p => type === 'drug' ? (p.disease_idx ?? p.drug_idx) : (p.drug_idx ?? p.disease_idx)).join(',');
-        const dataset = document.getElementById(type + '-dataset')?.value || 'C-dataset';
-
-        fetch(`api/proxy.php?action=bulk_pathway&query_type=${type}&query_idx=${queryIdx}&targets=${targets}&dataset=${dataset}`)
-            .then(res => res.json())
-            .then(data => {
-                processPathwayData(data, 'query');
-                buildAndRenderGraph();
-            }).catch(err => {
-                console.error("Error loading bulk pathway:", err);
-                buildAndRenderGraph();
+                processPathwayData(data, qKey);
             });
+            buildAndRenderGraph();
+        } else {
+            (async () => {
+                const fetchedData = [];
+                for (let gi = 0; gi < batchResults.length; gi++) {
+                    if (myGen !== gnn3dGeneration) return;
+                    const result = batchResults[gi];
+                    const qKey = 'query_' + gi;
+                    const rType = result.type || result._type || type;
+                    const bTargets = result.predictions.map(p => rType === 'drug' ? (p.disease_idx ?? p.drug_idx) : (p.drug_idx ?? p.disease_idx)).join(',');
+                    const ds = result.dataset || dataset;
+                    try {
+                        const res = await fetch(`api/proxy.php?action=bulk_pathway&query_type=${rType}&query_idx=${result.queryIdx}&targets=${bTargets}&dataset=${ds}`);
+                        const data = await res.json();
+                        if (myGen !== gnn3dGeneration) return;
+                        fetchedData.push(data);
+                        processPathwayData(data, qKey);
+                    } catch (err) { console.error(`Batch pathway error for ${result.queryName}:`, err); }
+                }
+                if (myGen !== gnn3dGeneration) return;
+                window._cachedPathwayKey = cacheKey;
+                window._cachedPathwayData = fetchedData;
+                buildAndRenderGraph();
+            })();
+        }
+    } else {
+        // Single mode
+        const cacheKey = `single_${type}_${queryIdx}_${targets}_${dataset}`;
+        
+        if (window._cachedPathwayKey === cacheKey && window._cachedPathwayData) { 
+            console.log('[3D] Using cached single pathway data');
+            if (myGen !== gnn3dGeneration) return;
+            processPathwayData(window._cachedPathwayData, 'query');
+            buildAndRenderGraph();
+        } else {
+            fetch(`api/proxy.php?action=bulk_pathway&query_type=${type}&query_idx=${queryIdx}&targets=${targets}&dataset=${dataset}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (myGen !== gnn3dGeneration) return;
+                    window._cachedPathwayKey = cacheKey;
+                    window._cachedPathwayData = data;
+                    processPathwayData(data, 'query');
+                    buildAndRenderGraph();
+                }).catch(err => {
+                    console.error("Error loading bulk pathway:", err);
+                    if (myGen !== gnn3dGeneration) return;
+                    buildAndRenderGraph();
+                });
+        }
     }
 }
 
@@ -963,7 +1022,12 @@ function renderBatchResults(allResults, queryType, resultType) {
             const scoreColor = score >= 70 ? '#34d399' : score >= 40 ? '#fbbf24' : '#f87171';
             const scoreGrad = score >= 70 ? 'linear-gradient(90deg, #10b981, #34d399)' : score >= 40 ? '#fbbf24' : '#f87171';
             const targetName = resultType === 'disease' ? (p.disease_name || p.name || '') : (p.drug_name || p.name || '');
-            const safeDrugName = String(p.drug_name || result.queryName).replace(/'/g, "\\'");
+            
+            const drugName = resultType === 'disease' ? (p.drug_name || result.queryName) : targetName;
+            const diseaseName = resultType === 'disease' ? targetName : (p.disease_name || result.queryName);
+            const safeDrugName = String(drugName).replace(/'/g, "\\'");
+            const safeDiseaseName = String(diseaseName).replace(/'/g, "\\'");
+
             const drugIdx = p.drug_idx ?? result.queryIdx;
             const diseaseIdx = p.disease_idx ?? 0;
 
@@ -984,7 +1048,7 @@ function renderBatchResults(allResults, queryType, resultType) {
                         <div class="score-text" style="color: ${scoreColor};">${score.toFixed(1)}%</div>
                     </div>
                     <div class="btn-section">
-                        <button class="mini-action-btn" onclick="openIntelligenceHub(${drugIdx}, ${diseaseIdx}, '${safeDrugName}', ${score}, '${p.status || (p.is_known ? 'literature' : 'novel')}', 'xai')">
+                        <button class="mini-action-btn" onclick="openIntelligenceHub(${drugIdx}, ${diseaseIdx}, '${safeDrugName}', '${safeDiseaseName}', ${score}, '${p.status || (p.is_known ? 'literature' : 'novel')}', 'xai')">
                             <i class="fas fa-microchip"></i> XAI
                         </button>
                     </div>
@@ -1227,6 +1291,7 @@ function renderCombinedResults(drugResults, diseaseResults, elapsed) {
             const scoreGrad = score >= 70 ? 'linear-gradient(90deg, #10b981, #34d399)' : score >= 40 ? '#fbbf24' : '#f87171';
             const targetName = p.disease_name || p.name || '';
             const safeDrugName = String(result.queryName).replace(/'/g, "\\'");
+            const safeDiseaseName = String(targetName).replace(/'/g, "\\'");
             const drugIdx = result.queryIdx;
             const diseaseIdx = p.disease_idx ?? 0;
 
@@ -1248,7 +1313,7 @@ function renderCombinedResults(drugResults, diseaseResults, elapsed) {
                         <div class="score-text" style="color: ${scoreColor};">${score.toFixed(1)}%</div>
                     </div>
                     <div class="btn-section">
-                        <button class="mini-action-btn" onclick="openIntelligenceHub(${drugIdx}, ${diseaseIdx}, '${safeDrugName}', ${score}, '${p.status || (p.is_known ? 'literature' : 'novel')}', 'xai')">
+                        <button class="mini-action-btn" onclick="openIntelligenceHub(${drugIdx}, ${diseaseIdx}, '${safeDrugName}', '${safeDiseaseName}', ${score}, '${p.status || (p.is_known ? 'literature' : 'novel')}', 'xai')">
                             <i class="fas fa-microchip"></i> XAI
                         </button>
                     </div>
@@ -1269,7 +1334,8 @@ function renderCombinedResults(drugResults, diseaseResults, elapsed) {
             const scoreColor = score >= 70 ? '#34d399' : score >= 40 ? '#fbbf24' : '#f87171';
             const scoreGrad = score >= 70 ? 'linear-gradient(90deg, #10b981, #34d399)' : score >= 40 ? '#fbbf24' : '#f87171';
             const targetName = p.drug_name || p.name || '';
-            const safeName = String(targetName).replace(/'/g, "\\'");
+            const safeDrugName = String(targetName).replace(/'/g, "\\'");
+            const safeDiseaseName = String(result.queryName).replace(/'/g, "\\'");
             const drugIdx = p.drug_idx ?? 0;
             const diseaseIdx = result.queryIdx;
 
@@ -1291,7 +1357,7 @@ function renderCombinedResults(drugResults, diseaseResults, elapsed) {
                         <div class="score-text" style="color: ${scoreColor};">${score.toFixed(1)}%</div>
                     </div>
                     <div class="btn-section">
-                        <button class="mini-action-btn" onclick="openIntelligenceHub(${drugIdx}, ${diseaseIdx}, '${safeName}', ${score}, '${p.status || (p.is_known ? 'literature' : 'novel')}', 'xai')">
+                        <button class="mini-action-btn" onclick="openIntelligenceHub(${drugIdx}, ${diseaseIdx}, '${safeDrugName}', '${safeDiseaseName}', ${score}, '${p.status || (p.is_known ? 'literature' : 'novel')}', 'xai')">
                             <i class="fas fa-microchip"></i> XAI
                         </button>
                     </div>
@@ -1635,6 +1701,7 @@ function predictProtein() {
                 const scoreColor = score >= 70 ? '#34d399' : score >= 40 ? '#fbbf24' : '#f87171';
                 const scoreGrad = score >= 70 ? 'linear-gradient(90deg, #10b981, #34d399)' : score >= 40 ? '#fbbf24' : '#f87171';
                 const safeDrugName = String(p.drug_name).replace(/'/g, "\\'");
+                const safeDiseaseName = String(p.disease_name).replace(/'/g, "\\'");
                 return `
                     <div class="result-card">
                         <div class="rank-circle">${i + 1}</div>
@@ -1656,7 +1723,7 @@ function predictProtein() {
                             <div class="score-text" style="color: ${scoreColor};">${score.toFixed(1)}%</div>
                         </div>
                         <div class="btn-section">
-                            <button class="mini-action-btn" onclick="openIntelligenceHub(${p.drug_idx}, ${p.disease_idx}, '${safeDrugName}', ${score}, '${p.status || (p.is_known ? 'literature' : 'novel')}', 'xai')">
+                            <button class="mini-action-btn" onclick="openIntelligenceHub(${p.drug_idx}, ${p.disease_idx}, '${safeDrugName}', '${safeDiseaseName}', ${score}, '${p.status || (p.is_known ? 'literature' : 'novel')}', 'xai')">
                                 <i class="fas fa-microchip"></i> Chi Tiết XAI
                             </button>
                         </div>
@@ -1754,7 +1821,11 @@ function renderResults(predictions, type, queryName, queryId) {
         const score = p.score || 0;
         const drugIdx = type === 'disease' ? queryId : p.drug_idx;
         const diseaseIdx = type === 'disease' ? p.disease_idx : queryId;
-        const safeName = String(name).replace(/'/g, "\\'");
+
+        const drugName = type === 'disease' ? queryName : name;
+        const diseaseName = type === 'disease' ? name : queryName;
+        const safeDrugName = String(drugName).replace(/'/g, "\\'");
+        const safeDiseaseName = String(diseaseName).replace(/'/g, "\\'");
 
         return `
             <div class="result-card">
@@ -1779,7 +1850,7 @@ function renderResults(predictions, type, queryName, queryId) {
                     </span>
                 </div>
                 <div class="btn-section">
-                    <button class="mini-action-btn" onclick="openIntelligenceHub(${drugIdx}, ${diseaseIdx}, '${safeName}', ${score}, '${p.status || (p.is_known ? 'literature' : 'novel')}', 'xai')">
+                    <button class="mini-action-btn" onclick="openIntelligenceHub(${drugIdx}, ${diseaseIdx}, '${safeDrugName}', '${safeDiseaseName}', ${score}, '${p.status || (p.is_known ? 'literature' : 'novel')}', 'xai')">
                         <i class="fas fa-microchip"></i> Chi Tiết XAI
                     </button>
                 </div>
@@ -1809,27 +1880,7 @@ if (document.getElementById('modal-overlay')) {
 }
 
 // COMPREHENSIVE INTELLIGENCE HUB (360° ANALYSIS)
-window.openIntelligenceHub = function (drugIdx, diseaseIdx, targetName, score, status, defaultTab = 'xai') {
-    // Smart name resolution: determine if we came from drug→disease or disease→drug
-    const drugSearchVal = document.getElementById('drug-search')?.value || '';
-    const diseaseSearchVal = document.getElementById('disease-search')?.value || '';
-
-    // If drug search has a value, user searched drug → targets are diseases
-    // If disease search has a value, user searched disease → targets are drugs
-    let drugName, diseaseName;
-    if (drugSearchVal && !diseaseSearchVal) {
-        // Drug → Disease mode: targetName = disease name
-        drugName = drugSearchVal;
-        diseaseName = targetName;
-    } else if (diseaseSearchVal && !drugSearchVal) {
-        // Disease → Drug mode: targetName = drug name
-        drugName = targetName;
-        diseaseName = diseaseSearchVal;
-    } else {
-        // Fallback: use API data (will be resolved after fetch)
-        drugName = drugSearchVal || targetName || 'Selected Drug';
-        diseaseName = diseaseSearchVal || targetName || 'Selected Disease';
-    }
+window.openIntelligenceHub = function (drugIdx, diseaseIdx, drugName, diseaseName, score, status, defaultTab = 'xai') {
     const dataset = document.getElementById('global-dataset')?.value || 'C-dataset';
     const scoreLevel = score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low';
 
@@ -3645,10 +3696,22 @@ function buildRichInfoPanelHtml(predictions, queryType, queryName, dataset, batc
  * Render the ORIGINAL 3D graph in the first container (no protein)
  */
 let originalGraphInstance = null;
+let original3dGeneration = 0;
 
 function renderOriginal3DGraph(predictions, type, queryIdx, batchResults) {
+    const myGen = ++original3dGeneration;
     const container = document.getElementById('3d-graph-container-original');
     if (!container) return;
+
+    // Guard both offsetWidth and offsetHeight to prevent degenerated WebGL camera projection matrices (aspect ratio = 0/0 = NaN)
+    if (!container.offsetWidth || container.offsetWidth < 50 || !container.offsetHeight || container.offsetHeight < 50) {
+        setTimeout(() => {
+            if (myGen === original3dGeneration) {
+                renderOriginal3DGraph(predictions, type, queryIdx, batchResults);
+            }
+        }, 100);
+        return;
+    }
 
     const width = container.offsetWidth || 400;
     const height = 320;
@@ -3728,6 +3791,7 @@ function renderOriginal3DGraph(predictions, type, queryIdx, batchResults) {
 
     const canvasEl = document.getElementById('gnn-3d-canvas-original');
     if (typeof ForceGraph3D !== 'undefined' && canvasEl) {
+        if (myGen !== original3dGeneration) return;
         // Original model uses pink/blue color palette
         const colorMap = { drug: '#60a5fa', disease: '#f87171', protein: '#fbbf24' };
 
@@ -3737,8 +3801,8 @@ function renderOriginal3DGraph(predictions, type, queryIdx, batchResults) {
 
         const Graph = ForceGraph3D()(canvasEl)
             .graphData({ nodes: nodes, links: uniqueLinks })
-            .width(canvasEl.offsetWidth)
-            .height(canvasEl.offsetHeight)
+            .width(width)
+            .height(height)
             .backgroundColor('rgba(0,0,0,0)')
             .nodeId('id')
             .nodeVal(n => n.isQuery ? 8 : 4)
@@ -3757,8 +3821,8 @@ function renderOriginal3DGraph(predictions, type, queryIdx, batchResults) {
                 showToast(`${node.type === 'drug' ? '💊' : '🦠'} ${node.name} (${((node.score || 0) * 100).toFixed(1)}%)`, 'info');
             });
 
-        Graph.d3Force('charge').strength(-40);
-        Graph.d3Force('link').distance(30);
+        Graph.d3Force('charge').strength(-60);
+        Graph.d3Force('link').distance(40);
 
         // Layout: Drug left, Disease right
         Graph.onEngineTick(() => {
@@ -3780,7 +3844,9 @@ function renderOriginal3DGraph(predictions, type, queryIdx, batchResults) {
         originalGraphInstance = Graph;
 
         window.addEventListener('resize', () => {
-            if (canvasEl.offsetWidth) Graph.width(canvasEl.offsetWidth).height(canvasEl.offsetHeight);
+            const newW = container.offsetWidth || width;
+            const newH = 320;
+            Graph.width(newW).height(newH);
         });
     } else {
         if (canvasEl) canvasEl.innerHTML = '<div style="color:#f87171;text-align:center;padding:2rem;font-size:0.8rem;">3D Force Graph chưa tải. Vui lòng F5.</div>';

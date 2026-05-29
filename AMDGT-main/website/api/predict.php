@@ -10,6 +10,12 @@ $type = $input['type'] ?? '';
 $topK = intval($input['top_k'] ?? 10);
 $dataset = $input['dataset'] ?? 'C-dataset';
 
+// Defensive cap: If top_k is abnormally large (e.g. 9999 from combined searches)
+// but no filter is provided, cap it to 50 to prevent database bloating.
+if ($topK > 100 && !isset($input['filter_disease_idxs']) && !isset($input['filter_drug_idxs'])) {
+    $topK = 50;
+}
+
 $db = getDB();
 
 // Helper: fetch column safely
@@ -793,15 +799,23 @@ if ($type === 'drug_to_disease') {
     $predictions = getCSVBasedPredictions($dataDir, 'drug', $drugIdx, $topK);
 
     $filterDiseaseIdxs = $input['filter_disease_idxs'] ?? null;
-    if (is_array($filterDiseaseIdxs)) {
-        $filtered = [];
-        $filterSet = array_map('intval', $filterDiseaseIdxs);
-        foreach ($predictions as $p) {
-            if (in_array(intval($p['disease_idx']), $filterSet, true)) {
-                $filtered[] = $p;
+    if ($filterDiseaseIdxs !== null) {
+        if (is_string($filterDiseaseIdxs)) {
+            $decoded = json_decode($filterDiseaseIdxs, true);
+            if (is_array($decoded)) {
+                $filterDiseaseIdxs = $decoded;
             }
         }
-        $predictions = $filtered;
+        if (is_array($filterDiseaseIdxs)) {
+            $filtered = [];
+            $filterSet = array_map('intval', $filterDiseaseIdxs);
+            foreach ($predictions as $p) {
+                if (in_array(intval($p['disease_idx']), $filterSet, true)) {
+                    $filtered[] = $p;
+                }
+            }
+            $predictions = $filtered;
+        }
     }
 
     dbExec($db, "INSERT INTO predictions (user_id, dataset, query_type, query_value, results) VALUES (?, ?, ?, ?, ?)",
@@ -825,15 +839,23 @@ if ($type === 'drug_to_disease') {
     $predictions = getCSVBasedPredictions($dataDir, 'disease', $diseaseIdx, $topK);
 
     $filterDrugIdxs = $input['filter_drug_idxs'] ?? null;
-    if (is_array($filterDrugIdxs)) {
-        $filtered = [];
-        $filterSet = array_map('intval', $filterDrugIdxs);
-        foreach ($predictions as $p) {
-            if (in_array(intval($p['drug_idx']), $filterSet, true)) {
-                $filtered[] = $p;
+    if ($filterDrugIdxs !== null) {
+        if (is_string($filterDrugIdxs)) {
+            $decoded = json_decode($filterDrugIdxs, true);
+            if (is_array($decoded)) {
+                $filterDrugIdxs = $decoded;
             }
         }
-        $predictions = $filtered;
+        if (is_array($filterDrugIdxs)) {
+            $filtered = [];
+            $filterSet = array_map('intval', $filterDrugIdxs);
+            foreach ($predictions as $p) {
+                if (in_array(intval($p['drug_idx']), $filterSet, true)) {
+                    $filtered[] = $p;
+                }
+            }
+            $predictions = $filtered;
+        }
     }
 
     dbExec($db, "INSERT INTO predictions (user_id, dataset, query_type, query_value, results) VALUES (?, ?, ?, ?, ?)",
