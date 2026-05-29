@@ -1200,7 +1200,19 @@ foreach ($metricKeys as $key) {
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($originalBenchmark as $dsName => $s): ?>
+                    <?php 
+                    $origTotal = ['drugs' => 0, 'diseases' => 0, 'proteins' => 0, 'dd' => 0, 'dp' => 0, 'pd' => 0];
+                    foreach ($originalBenchmark as $s) {
+                        $origTotal['drugs'] += $s['drugs'];
+                        $origTotal['diseases'] += $s['diseases'];
+                        $origTotal['proteins'] += $s['proteins'];
+                        $origTotal['dd'] += $s['dd'];
+                        $origTotal['dp'] += $s['dp'];
+                        $origTotal['pd'] += $s['pd'];
+                    }
+                    $origTotal['sparsity'] = ($origTotal['drugs'] > 0 && $origTotal['diseases'] > 0) ? round($origTotal['dd'] / ($origTotal['drugs'] * $origTotal['diseases']), 4) : 0;
+                    
+                    foreach ($originalBenchmark as $dsName => $s): ?>
                     <tr style="<?= $dsName === $selectedDataset ? 'background: rgba(102,126,234,0.1);' : '' ?>">
                         <td><strong><?= htmlspecialchars($dsName) ?></strong></td>
                         <td><?= number_format($s['drugs']) ?></td>
@@ -1209,9 +1221,20 @@ foreach ($metricKeys as $key) {
                         <td><?= number_format($s['dd']) ?></td>
                         <td><?= number_format($s['dp']) ?></td>
                         <td><?= number_format($s['pd']) ?></td>
-                        <td><?= $s['sparsity'] ?></td>
+                        <td><?= number_format($s['sparsity'], 4) ?></td>
                     </tr>
                     <?php endforeach; ?>
+                    <!-- Total Row -->
+                    <tr style="background: rgba(255,255,255,0.06); font-weight: bold; border-top: 2px solid rgba(255,255,255,0.15);">
+                        <td><strong>Tổng cộng</strong></td>
+                        <td><?= number_format($origTotal['drugs']) ?></td>
+                        <td><?= number_format($origTotal['diseases']) ?></td>
+                        <td><?= number_format($origTotal['proteins']) ?></td>
+                        <td><?= number_format($origTotal['dd']) ?></td>
+                        <td><?= number_format($origTotal['dp']) ?></td>
+                        <td><?= number_format($origTotal['pd']) ?></td>
+                        <td><?= number_format($origTotal['sparsity'], 4) ?></td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -1236,7 +1259,19 @@ foreach ($metricKeys as $key) {
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($currentBenchmark as $dsName => $s): 
+                    <?php 
+                    $currTotal = ['drugs' => 0, 'diseases' => 0, 'proteins' => 0, 'dd' => 0, 'dp' => 0, 'pd' => 0];
+                    foreach ($currentBenchmark as $s) {
+                        $currTotal['drugs'] += $s['drugs'];
+                        $currTotal['diseases'] += $s['diseases'];
+                        $currTotal['proteins'] += $s['proteins'];
+                        $currTotal['dd'] += $s['dd'];
+                        $currTotal['dp'] += $s['dp'];
+                        $currTotal['pd'] += $s['pd'];
+                    }
+                    $currTotal['sparsity'] = ($currTotal['drugs'] > 0 && $currTotal['diseases'] > 0) ? round($currTotal['dd'] / ($currTotal['drugs'] * $currTotal['diseases']), 4) : 0;
+                    
+                    foreach ($currentBenchmark as $dsName => $s): 
                         $orig = $originalBenchmark[$dsName];
                     ?>
                     <tr style="<?= $dsName === $selectedDataset ? 'background: rgba(0,255,136,0.05);' : '' ?>">
@@ -1254,16 +1289,41 @@ foreach ($metricKeys as $key) {
                         </td>
                         <?php endforeach; ?>
                         <td>
-                            <?= $s['sparsity'] ?>
+                            <?= number_format($s['sparsity'], 4) ?>
                             <?php $sDiff = round($s['sparsity'] - $orig['sparsity'], 4); ?>
                             <?php if ($sDiff != 0): ?>
                             <span style="font-size:0.75rem; color: <?= $sDiff > 0 ? '#00ff88' : '#ff4757' ?>; margin-left:4px;">
-                                <?= $sDiff > 0 ? '+' : '' ?><?= $sDiff ?>
+                                <?= $sDiff > 0 ? '+' : '' ?><?= number_format($sDiff, 4) ?>
                             </span>
                             <?php endif; ?>
                         </td>
                     </tr>
                     <?php endforeach; ?>
+                    <!-- Total Row -->
+                    <tr style="background: rgba(255,255,255,0.06); font-weight: bold; border-top: 2px solid rgba(255,255,255,0.15);">
+                        <td><strong>Tổng cộng</strong></td>
+                        <?php foreach (['drugs','diseases','proteins','dd','dp','pd'] as $col): 
+                            $diff = $currTotal[$col] - $origTotal[$col];
+                        ?>
+                        <td>
+                            <?= number_format($currTotal[$col]) ?>
+                            <?php if ($diff != 0): ?>
+                            <span style="font-size:0.75rem; color: <?= $diff > 0 ? '#00ff88' : '#ff4757' ?>; margin-left:4px;">
+                                <?= $diff > 0 ? '+' : '' ?><?= number_format($diff) ?>
+                            </span>
+                            <?php endif; ?>
+                        </td>
+                        <?php endforeach; ?>
+                        <td>
+                            <?= number_format($currTotal['sparsity'], 4) ?>
+                            <?php $sDiff = round($currTotal['sparsity'] - $origTotal['sparsity'], 4); ?>
+                            <?php if ($sDiff != 0): ?>
+                            <span style="font-size:0.75rem; color: <?= $sDiff > 0 ? '#00ff88' : '#ff4757' ?>; margin-left:4px;">
+                                <?= $sDiff > 0 ? '+' : '' ?><?= number_format($sDiff, 4) ?>
+                            </span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -1326,15 +1386,15 @@ foreach ($metricKeys as $key) {
                 ?>
                 <tr>
                     <td><strong><?php echo $key; ?></strong></td>
-                    <td class="baseline-text"><?php echo round($baseVal * 100, 2); ?>%</td>
-                    <td class="improved-text"><?php echo round($imprVal * 100, 2); ?>%</td>
+                    <td class="baseline-text"><?php echo number_format($baseVal * 100, 2); ?>%</td>
+                    <td class="improved-text"><?php echo number_format($imprVal * 100, 2); ?>%</td>
                     <td>
                         <span class="diff-badge <?php echo $diff > 0 ? 'up' : 'down'; ?>">
-                            <?php echo $diff > 0 ? '+' : ''; ?><?php echo round($diff, 2); ?>%
+                            <?php echo $diff > 0 ? '+' : ''; ?><?php echo number_format($diff, 2); ?>%
                         </span>
                     </td>
                     <td style="color: <?php echo $pct > 0 ? '#00ff88' : '#ff4757'; ?>">
-                        <?php echo $pct > 0 ? '+' : ''; ?><?php echo round($pct, 2); ?>%
+                        <?php echo $pct > 0 ? '+' : ''; ?><?php echo number_format($pct, 2); ?>%
                     </td>
                 </tr>
                 <?php endforeach; ?>
@@ -2519,10 +2579,6 @@ foreach ($metricKeys as $key) {
                         <span style="color: #fff; font-size: 0.85rem; font-weight: 600;">Thuốc</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 6px;">
-                        <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; box-shadow: 0 0 8px #f59e0b;"></span>
-                        <span style="color: #fff; font-size: 0.85rem; font-weight: 600;">Protein</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 6px;">
                         <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 8px #ef4444;"></span>
                         <span style="color: #fff; font-size: 0.85rem; font-weight: 600;">Bệnh</span>
                     </div>
@@ -2635,10 +2691,6 @@ foreach ($metricKeys as $key) {
                         <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; box-shadow: 0 0 8px #f59e0b;"></span>
                         <span style="color: #fff; font-size: 0.85rem; font-weight: 600;">Protein</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 8px #ef4444;"></span>
-                        <span style="color: #fff; font-size: 0.85rem; font-weight: 600;">Bệnh</span>
-                    </div>
                 </div>
             </div>
 
@@ -2740,10 +2792,6 @@ foreach ($metricKeys as $key) {
                 </div>
                 <!-- Legends -->
                 <div style="display: flex; gap: 16px; align-items: center; background: rgba(255,255,255,0.02); padding: 6px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05);">
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #3b82f6; box-shadow: 0 0 8px #3b82f6;"></span>
-                        <span style="color: #fff; font-size: 0.85rem; font-weight: 600;">Thuốc</span>
-                    </div>
                     <div style="display: flex; align-items: center; gap: 6px;">
                         <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; box-shadow: 0 0 8px #f59e0b;"></span>
                         <span style="color: #fff; font-size: 0.85rem; font-weight: 600;">Protein</span>

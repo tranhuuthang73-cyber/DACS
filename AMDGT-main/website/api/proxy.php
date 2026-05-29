@@ -963,6 +963,16 @@ if ($action === 'bulk_pathway') {
             $shared = array_intersect($queryProteins, $targetProteins);
             $shared = array_unique($shared);
             $shared = array_slice($shared, 0, 3);
+            
+            // FALLBACK: If no shared proteins, pick top 3 linked to the drug or disease
+            if (empty($shared)) {
+                if (!empty($queryProteins)) {
+                    $shared = array_slice($queryProteins, 0, 3);
+                } elseif (!empty($targetProteins)) {
+                    $shared = array_slice($targetProteins, 0, 3);
+                }
+            }
+            
             foreach ($shared as $pIdx) {
                 if (!isset($proteins[$pIdx])) {
                     $proteins[$pIdx] = ['idx' => $pIdx, 'name' => $proteinNames[$pIdx] ?? "Protein_$pIdx"];
@@ -978,6 +988,16 @@ if ($action === 'bulk_pathway') {
             $shared = array_intersect($queryProteins, $targetProteins);
             $shared = array_unique($shared);
             $shared = array_slice($shared, 0, 3);
+            
+            // FALLBACK: If no shared proteins, pick top 3 linked to the drug or disease
+            if (empty($shared)) {
+                if (!empty($queryProteins)) {
+                    $shared = array_slice($queryProteins, 0, 3);
+                } elseif (!empty($targetProteins)) {
+                    $shared = array_slice($targetProteins, 0, 3);
+                }
+            }
+            
             foreach ($shared as $pIdx) {
                 if (!isset($proteins[$pIdx])) {
                     $proteins[$pIdx] = ['idx' => $pIdx, 'name' => $proteinNames[$pIdx] ?? "Protein_$pIdx"];
@@ -1086,14 +1106,12 @@ if ($action === 'pathway') {
     
     $topProteins = array_slice($sharedProteins, 0, 15);
     
-    // FALLBACK: If no shared proteins, pick one that is linked to the drug or disease
+    // FALLBACK: If no shared proteins, pick top 3 that are linked to the drug or disease
     if (empty($topProteins)) {
         if (!empty($linkedProteins)) {
-            $idx = ($drugIdx + $diseaseIdx) % count($linkedProteins);
-            $topProteins = [$linkedProteins[$idx]];
+            $topProteins = array_slice($linkedProteins, 0, 3);
         } elseif (!empty($diseaseProteins)) {
-            $idx = ($drugIdx + $diseaseIdx) % count($diseaseProteins);
-            $topProteins = [$diseaseProteins[$idx]];
+            $topProteins = array_slice($diseaseProteins, 0, 3);
         }
     }
 
@@ -1709,14 +1727,12 @@ if ($action === 'proteins_for_pair') {
     
     $topProteins = array_slice($sharedProteins, 0, 15);
     
-    // FALLBACK: If no shared proteins, pick one that is linked to the drug or disease
+    // FALLBACK: If no shared proteins, pick top 3 that are linked to the drug or disease
     if (empty($topProteins)) {
         if (!empty($drugProteins)) {
-            $idx = ($drugIdx + $diseaseIdx) % count($drugProteins);
-            $topProteins = [$drugProteins[$idx]];
+            $topProteins = array_slice($drugProteins, 0, 3);
         } elseif (!empty($diseaseProteins)) {
-            $idx = ($drugIdx + $diseaseIdx) % count($diseaseProteins);
-            $topProteins = [$diseaseProteins[$idx]];
+            $topProteins = array_slice($diseaseProteins, 0, 3);
         }
     }
 

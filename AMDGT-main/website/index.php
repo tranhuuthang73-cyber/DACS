@@ -181,6 +181,35 @@ foreach ($datasetStats as $stats) {
                     </td>
                 </tr>
                 <?php endforeach; ?>
+                <!-- Total Row -->
+                <?php if (!empty($datasetStats)): 
+                    $totDrugs = 0;
+                    $totDiseases = 0;
+                    $totProteins = 0;
+                    $totAssoc = 0;
+                    $totDP = 0;
+                    $totPD = 0;
+                    foreach ($datasetStats as $stats) {
+                        $totDrugs += $stats['drugs'] ?? 0;
+                        $totDiseases += $stats['diseases'] ?? 0;
+                        $totProteins += $stats['proteins'] ?? 0;
+                        $totAssoc += $stats['associations'] ?? 0;
+                        $totDP += $stats['drug_protein'] ?? 0;
+                        $totPD += $stats['protein_disease'] ?? 0;
+                    }
+                    $totSparsity = ($totDrugs > 0 && $totDiseases > 0) ? ($totAssoc / ($totDrugs * $totDiseases)) : 0;
+                ?>
+                <tr style="border-top: 2px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.06); font-weight: bold;">
+                    <td style="padding: 1.2rem; font-weight: 800; color: #fff;"><strong>Tổng cộng</strong></td>
+                    <td style="padding: 1.2rem; color: #fff; font-weight: 700;"><?= number_format($totDrugs) ?></td>
+                    <td style="padding: 1.2rem; color: #fff; font-weight: 700;"><?= number_format($totDiseases) ?></td>
+                    <td style="padding: 1.2rem; color: #fff; font-weight: 700;"><?= number_format($totProteins) ?></td>
+                    <td style="padding: 1.2rem; color: #fff; font-weight: 700;"><?= number_format($totAssoc) ?></td>
+                    <td style="padding: 1.2rem; color: #fff; font-weight: 700;"><?= number_format($totDP) ?></td>
+                    <td style="padding: 1.2rem; color: #fff; font-weight: 700;"><?= number_format($totPD) ?></td>
+                    <td style="padding: 1.2rem; color: #fff; font-weight: 700;"><?= number_format($totSparsity, 4) ?></td>
+                </tr>
+                <?php endif; ?>
                 <?php if (empty($datasetStats)): ?>
                 <tr>
                     <td colspan="8" style="padding: 2rem; text-align: center; color: var(--text-muted); font-weight: 600;">Chưa có dữ liệu</td>
