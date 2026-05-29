@@ -186,7 +186,7 @@
     .search-input-wrapper {
         position: relative;
         margin-bottom: 0.8rem;
-        flex: 1;
+        flex: none;
         z-index: 10;
     }
 
@@ -233,6 +233,24 @@
         z-index: 10000;
         box-shadow: var(--shadow-xl);
         display: none;
+    }
+
+    .autocomplete-list::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .autocomplete-list::-webkit-scrollbar-track {
+        background: transparent;
+        margin: 10px 0;
+    }
+
+    .autocomplete-list::-webkit-scrollbar-thumb {
+        background: rgba(99, 102, 241, 0.3);
+        border-radius: 10px;
+    }
+
+    .autocomplete-list::-webkit-scrollbar-thumb:hover {
+        background: rgba(99, 102, 241, 0.6);
     }
 
     .autocomplete-item {

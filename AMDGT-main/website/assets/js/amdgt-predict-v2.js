@@ -173,7 +173,6 @@ function update3DInfoPanel(predictions, queryType, queryName, dataset, batchResu
 // ========== END 3D INFO PANEL ==========
 
 // ========== MULTI-SELECT SYSTEM ==========
-const MAX_SELECTED = 10;
 const selectedItems = {
     drug: [],     // [{idx, name, id, dataset}, ...]
     protein: [],
@@ -186,9 +185,14 @@ function addItem(type, idx, name, id, dataset) {
     if (selectedItems[type].some(item => item.idx === idx && item.dataset === dataset)) {
         return; // Already added
     }
+    
+    // Giới hạn số lượng tag dựa theo Top K hiện tại, tối đa 50
+    let currentLimit = parseInt(document.getElementById(type + '-topk')?.value) || 1;
+    if (currentLimit > 50) currentLimit = 50;
+
     // Check limit
-    if (selectedItems[type].length >= MAX_SELECTED) {
-        showToast(`Tối đa ${MAX_SELECTED} ${type} mỗi lần!`, 'warning');
+    if (selectedItems[type].length >= currentLimit) {
+        showToast(`Giới hạn tối đa ${currentLimit} ${type} (dựa theo số lượng Top K)!`, 'warning');
         return;
     }
     selectedItems[type].push({ idx, name, id, dataset });
@@ -316,29 +320,40 @@ window.updateTopK = function(type, delta) {
     const input = document.getElementById(type + '-topk-input');
     if (!input) return;
     let val = parseInt(input.value);
-    if (isNaN(val)) val = 20;
+    if (isNaN(val)) val = 1;
     val += delta;
     if (val < 1) val = 1;
-    if (val > 500) val = 500;
+    if (val > 50) val = 50;
     input.value = val;
     syncTopK(type);
 };
 
 window.syncTopK = function(type) {
     const input = document.getElementById(type + '-topk-input');
-    let val = 20;
-    if (input && input.value !== '') {
-        val = parseInt(input.value);
-    } else if (!input) {
-        val = parseInt(document.getElementById(type + '-topk').value);
-    }
-    
-    if (isNaN(val) || val < 1) val = 1;
-    if (val > 500) val = 500;
-    
-    if (input) input.value = val;
     const hiddenInput = document.getElementById(type + '-topk');
-    if (hiddenInput) hiddenInput.value = val;
+    let val = 1;
+
+    if (input) {
+        if (input.value === '') {
+            if (hiddenInput) hiddenInput.value = 1;
+            return;
+        }
+        val = parseInt(input.value);
+        if (isNaN(val)) val = 1;
+        if (val > 50) {
+            val = 50;
+            input.value = 50;
+        } else if (val < 1 && input.value !== '0') {
+            val = 1;
+            input.value = 1;
+        }
+    } else {
+        if (hiddenInput) val = parseInt(hiddenInput.value);
+        if (isNaN(val) || val < 1) val = 1;
+        if (val > 50) val = 50;
+    }
+
+    if (hiddenInput) hiddenInput.value = Math.max(1, val);
     
     document.querySelectorAll('.topk-btn[data-type="' + type + '"]').forEach(b => {
         b.classList.remove('active');
@@ -3513,9 +3528,7 @@ function buildRichInfoPanelHtml(predictions, queryType, queryName, dataset, batc
         elapsedVal = elapsedVal * 0.85;
     }
     const elapsed = elapsedVal > 0 ? elapsedVal.toFixed(2) : '—';
-    const allPreds = batchResults && batchResults.length > 1
-        ? batchResults.flatMap(r => r.predictions)
-        : predictions;
+    const allPreds = predictions;
     const count = allPreds.length;
     const avgScore = count > 0
         ? (allPreds.reduce((s, p) => s + (p.score || 0), 0) / count)
@@ -3671,7 +3684,7 @@ function renderOriginal3DGraph(predictions, type, queryIdx, batchResults) {
                 const predType = nodeType === 'drug' ? 'disease' : 'drug';
                 const name = pred.name || (predType === 'disease' ? pred.disease_name : pred.drug_name) || '';
                 const idx = predType === 'disease' ? (pred.disease_idx ?? 0) : (pred.drug_idx ?? 0);
-                let normScore = (pred.score || 0.5);
+                let normScore = (pred.baseline_score !== undefined ? pred.baseline_score : pred.score) || 0.5;
                 normScore = normScore > 1 ? normScore / 100 : normScore;
                 const nodeKey = predType + '_' + idx;
                 if (!nodeSet.has(nodeKey)) {
@@ -3694,7 +3707,7 @@ function renderOriginal3DGraph(predictions, type, queryIdx, batchResults) {
             const predType = type === 'drug' ? 'disease' : 'drug';
             const name = pred.name || pred.disease_name || pred.drug_name || `Node #${i}`;
             const idx = type === 'drug' ? (pred.disease_idx ?? i) : (pred.drug_idx ?? i);
-            let normScore = (pred.score || 0.5);
+            let normScore = (pred.baseline_score !== undefined ? pred.baseline_score : pred.score) || 0.5;
             normScore = normScore > 1 ? normScore / 100 : normScore;
             nodeSet.set(predType + '_' + idx, { name, type: predType, layer: 1, score: normScore, isQuery: false, isKnown: pred.is_known || false });
             links.push({ source: 'query', target: predType + '_' + idx, weight: normScore });

@@ -1174,32 +1174,6 @@ foreach ($metricKeys as $key) {
         </div>
     </div>
 
-    <!-- KPI Section -->
-    <div class="kpi-section">
-        <h2><i class="fas fa-trophy"></i> Key Performance Indicators</h2>
-        <div class="kpi-grid">
-            <?php
-            $kpiMetrics = ['AUC', 'AUPR', 'Accuracy', 'F1-score'];
-            $kpiIcons = ['fa-chart-line', 'fa-chart-area', 'fa-bullseye', 'fa-star'];
-            foreach ($kpiMetrics as $idx => $key):
-                $baseVal = floatval($base['mean'][$key] ?? 0) * 100;
-                $imprVal = floatval($improved['mean'][$key] ?? 0) * 100;
-                $diff = $imprVal - $baseVal;
-            ?>
-            <div class="kpi-card">
-                <div class="kpi-metric"><?php echo round($imprVal, 2); ?>%</div>
-                <div class="kpi-label">
-                    <i class="fas <?php echo $kpiIcons[$idx]; ?>"></i> <?php echo $key; ?>
-                </div>
-                <?php if ($diff != 0): ?>
-                <span class="kpi-diff <?php echo $diff > 0 ? 'positive' : 'negative'; ?>">
-                    <?php echo $diff > 0 ? '↑' : '↓'; ?> <?php echo abs(round($diff, 2)); ?>%
-                </span>
-                <?php endif; ?>
-            </div>
-            <?php endforeach; ?>
-        </div>
-    </div>
 
     <!-- Benchmark Comparison Table -->
     <div class="comparison-section" style="margin-top: 2rem;">

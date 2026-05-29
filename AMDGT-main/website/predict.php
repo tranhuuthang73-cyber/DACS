@@ -78,17 +78,12 @@ if (!isLoggedIn()) {
         <div class="topk-selector" style="display: flex; align-items: center; gap: 10px; margin: 0.8rem 0; flex-wrap: wrap;">
             <span style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Số lượng (Top K):</span>
             <div class="stepper-control" style="display: flex; align-items: center; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border); overflow: hidden;">
-                <button type="button" onclick="updateTopK('drug', -5)" style="background: transparent; border: none; border-right: 1px solid var(--border); color: var(--text-secondary); padding: 6px 12px; cursor: pointer; transition: all 0.2s;"><i class="fas fa-minus"></i></button>
-                <input type="number" id="drug-topk-input" value="20" min="1" max="500" step="1" onchange="syncTopK('drug')" style="width: 50px; background: transparent; border: none; color: #818cf8; text-align: center; font-weight: 700; font-size: 0.9rem; padding: 6px 0; outline: none;">
-                <button type="button" onclick="updateTopK('drug', 5)" style="background: transparent; border: none; border-left: 1px solid var(--border); color: var(--text-secondary); padding: 6px 12px; cursor: pointer; transition: all 0.2s;"><i class="fas fa-plus"></i></button>
-            </div>
-            <div style="display: flex; gap: 6px;">
-                <button type="button" class="topk-btn" data-type="drug" data-k="10">10</button>
-                <button type="button" class="topk-btn active" data-type="drug" data-k="20" style="background: rgba(99, 102, 241, 0.2); border-color: rgba(99, 102, 241, 0.4); color: #818cf8;">20</button>
-                <button type="button" class="topk-btn" data-type="drug" data-k="50">50</button>
+                <button type="button" onclick="updateTopK('drug', -1)" style="background: transparent; border: none; border-right: 1px solid var(--border); color: var(--text-secondary); padding: 6px 12px; cursor: pointer; transition: all 0.2s;"><i class="fas fa-minus"></i></button>
+                <input type="number" id="drug-topk-input" value="1" min="1" max="50" step="1" oninput="syncTopK('drug')" onblur="if(this.value==='' || parseInt(this.value)<1) { this.value=1; syncTopK('drug'); }" style="width: 50px; background: transparent; border: none; color: #818cf8; text-align: center; font-weight: 700; font-size: 0.9rem; padding: 6px 0; outline: none;">
+                <button type="button" onclick="updateTopK('drug', 1)" style="background: transparent; border: none; border-left: 1px solid var(--border); color: var(--text-secondary); padding: 6px 12px; cursor: pointer; transition: all 0.2s;"><i class="fas fa-plus"></i></button>
             </div>
         </div>
-        <input type="hidden" id="drug-topk" value="20">
+        <input type="hidden" id="drug-topk" value="1">
         <input type="hidden" id="btn-drug" value="">
         <div class="batch-progress" id="drug-progress" style="display:none;">
             <div class="batch-progress-bar" style="width:0%"></div>
@@ -119,17 +114,12 @@ if (!isLoggedIn()) {
         <div class="topk-selector" style="display: flex; align-items: center; gap: 10px; margin: 0.8rem 0; flex-wrap: wrap;">
             <span style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Số lượng (Top K):</span>
             <div class="stepper-control" style="display: flex; align-items: center; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border); overflow: hidden;">
-                <button type="button" onclick="updateTopK('protein', -5)" style="background: transparent; border: none; border-right: 1px solid var(--border); color: var(--text-secondary); padding: 6px 12px; cursor: pointer; transition: all 0.2s;"><i class="fas fa-minus"></i></button>
-                <input type="number" id="protein-topk-input" value="20" min="1" max="500" step="1" onchange="syncTopK('protein')" style="width: 50px; background: transparent; border: none; color: #f472b6; text-align: center; font-weight: 700; font-size: 0.9rem; padding: 6px 0; outline: none;">
-                <button type="button" onclick="updateTopK('protein', 5)" style="background: transparent; border: none; border-left: 1px solid var(--border); color: var(--text-secondary); padding: 6px 12px; cursor: pointer; transition: all 0.2s;"><i class="fas fa-plus"></i></button>
-            </div>
-            <div style="display: flex; gap: 6px;">
-                <button type="button" class="topk-btn" data-type="protein" data-k="10">10</button>
-                <button type="button" class="topk-btn active" data-type="protein" data-k="20" style="background: rgba(236, 72, 153, 0.2); border-color: rgba(236, 72, 153, 0.4); color: #f472b6;">20</button>
-                <button type="button" class="topk-btn" data-type="protein" data-k="50">50</button>
+                <button type="button" onclick="updateTopK('protein', -1)" style="background: transparent; border: none; border-right: 1px solid var(--border); color: var(--text-secondary); padding: 6px 12px; cursor: pointer; transition: all 0.2s;"><i class="fas fa-minus"></i></button>
+                <input type="number" id="protein-topk-input" value="1" min="1" max="50" step="1" oninput="syncTopK('protein')" onblur="if(this.value==='' || parseInt(this.value)<1) { this.value=1; syncTopK('protein'); }" style="width: 50px; background: transparent; border: none; color: #f472b6; text-align: center; font-weight: 700; font-size: 0.9rem; padding: 6px 0; outline: none;">
+                <button type="button" onclick="updateTopK('protein', 1)" style="background: transparent; border: none; border-left: 1px solid var(--border); color: var(--text-secondary); padding: 6px 12px; cursor: pointer; transition: all 0.2s;"><i class="fas fa-plus"></i></button>
             </div>
         </div>
-        <input type="hidden" id="protein-topk" value="20">
+        <input type="hidden" id="protein-topk" value="1">
 
         <button type="button" id="btn-protein"
             style="width: 100%; padding: 12px; background: linear-gradient(135deg, #ec4899, #f472b6); border: none; border-radius: 10px; color: white; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.3s;"
@@ -165,17 +155,12 @@ if (!isLoggedIn()) {
         <div class="topk-selector" style="display: flex; align-items: center; gap: 10px; margin: 0.8rem 0; flex-wrap: wrap;">
             <span style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Số lượng (Top K):</span>
             <div class="stepper-control" style="display: flex; align-items: center; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border); overflow: hidden;">
-                <button type="button" onclick="updateTopK('disease', -5)" style="background: transparent; border: none; border-right: 1px solid var(--border); color: var(--text-secondary); padding: 6px 12px; cursor: pointer; transition: all 0.2s;"><i class="fas fa-minus"></i></button>
-                <input type="number" id="disease-topk-input" value="20" min="1" max="500" step="1" onchange="syncTopK('disease')" style="width: 50px; background: transparent; border: none; color: #34d399; text-align: center; font-weight: 700; font-size: 0.9rem; padding: 6px 0; outline: none;">
-                <button type="button" onclick="updateTopK('disease', 5)" style="background: transparent; border: none; border-left: 1px solid var(--border); color: var(--text-secondary); padding: 6px 12px; cursor: pointer; transition: all 0.2s;"><i class="fas fa-plus"></i></button>
-            </div>
-            <div style="display: flex; gap: 6px;">
-                <button type="button" class="topk-btn" data-type="disease" data-k="10">10</button>
-                <button type="button" class="topk-btn active" data-type="disease" data-k="20" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.4); color: #34d399;">20</button>
-                <button type="button" class="topk-btn" data-type="disease" data-k="50">50</button>
+                <button type="button" onclick="updateTopK('disease', -1)" style="background: transparent; border: none; border-right: 1px solid var(--border); color: var(--text-secondary); padding: 6px 12px; cursor: pointer; transition: all 0.2s;"><i class="fas fa-minus"></i></button>
+                <input type="number" id="disease-topk-input" value="1" min="1" max="50" step="1" oninput="syncTopK('disease')" onblur="if(this.value==='' || parseInt(this.value)<1) { this.value=1; syncTopK('disease'); }" style="width: 50px; background: transparent; border: none; color: #34d399; text-align: center; font-weight: 700; font-size: 0.9rem; padding: 6px 0; outline: none;">
+                <button type="button" onclick="updateTopK('disease', 1)" style="background: transparent; border: none; border-left: 1px solid var(--border); color: var(--text-secondary); padding: 6px 12px; cursor: pointer; transition: all 0.2s;"><i class="fas fa-plus"></i></button>
             </div>
         </div>
-        <input type="hidden" id="disease-topk" value="20">
+        <input type="hidden" id="disease-topk" value="1">
         <input type="hidden" id="btn-disease" value="">
         <div class="batch-progress" id="disease-progress" style="display:none;">
             <div class="batch-progress-bar" style="width:0%"></div>

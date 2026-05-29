@@ -58,7 +58,6 @@ $stats = [
         <button class="tab" onclick="adminTab('assoc')" style="border-radius: 10px; padding: 10px 20px; font-weight: bold; transition: 0.3s;"><i class="fas fa-project-diagram"></i> Mạng Liên Kết</button>
         <button class="tab" onclick="adminTab('logs')" style="border-radius: 10px; padding: 10px 20px; font-weight: bold; transition: 0.3s;"><i class="fas fa-history"></i> Lịch Sử Toàn Hệ Thống</button>
         <button class="tab" onclick="adminTab('users')" style="border-radius: 10px; padding: 10px 20px; font-weight: bold; transition: 0.3s;"><i class="fas fa-users"></i> Quản Lý Người Dùng</button>
-        <button class="tab" onclick="adminTab('dataset_stats')" style="border-radius: 10px; padding: 10px 20px; font-weight: bold; transition: 0.3s;"><i class="fas fa-database"></i> Thống Kê Dataset</button>
     </div>
 
     <div id="admin-content" style="background: var(--bg-glass); backdrop-filter: blur(20px); border-radius: 20px; border: 1px solid var(--border); box-shadow: var(--shadow-lg); overflow: hidden; padding: 20px;"></div>
@@ -166,7 +165,7 @@ function refreshStats() {
 
 function adminTab(tab) {
     document.querySelectorAll('.tabs .tab').forEach((t, i) => {
-        t.classList.toggle('active', ['drugs','diseases','proteins','assoc','logs','users','dataset_stats'][i] === tab);
+        t.classList.toggle('active', ['drugs','diseases','proteins','assoc','logs','users'][i] === tab);
     });
     if (tab === 'drugs') loadDrugs(1);
     else if (tab === 'diseases') loadDiseases(1);
@@ -174,7 +173,6 @@ function adminTab(tab) {
     else if (tab === 'assoc') loadAssociations(1);
     else if (tab === 'logs') loadLogs(1);
     else if (tab === 'users') loadUsers(1);
-    else if (tab === 'dataset_stats') loadDatasetStats();
 }
 
 function attachAutocomplete(inputId, otherInputId, type, isNameField) {
