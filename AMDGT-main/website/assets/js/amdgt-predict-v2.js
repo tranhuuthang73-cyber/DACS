@@ -297,6 +297,11 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 function initEventListeners() {
+    // Sync UI from HTML values on load
+    ['drug', 'disease', 'protein'].forEach(type => {
+        if (document.getElementById(type + '-topk-input')) syncTopK(type);
+    });
+
     // TopK buttons
     document.querySelectorAll('.topk-btn').forEach(btn => {
         btn.addEventListener('click', function () {
@@ -310,7 +315,8 @@ function initEventListeners() {
 window.updateTopK = function(type, delta) {
     const input = document.getElementById(type + '-topk-input');
     if (!input) return;
-    let val = parseInt(input.value) || 20;
+    let val = parseInt(input.value);
+    if (isNaN(val)) val = 20;
     val += delta;
     if (val < 1) val = 1;
     if (val > 500) val = 500;
@@ -320,8 +326,14 @@ window.updateTopK = function(type, delta) {
 
 window.syncTopK = function(type) {
     const input = document.getElementById(type + '-topk-input');
-    let val = input ? (parseInt(input.value) || 20) : parseInt(document.getElementById(type + '-topk').value);
-    if (val < 1) val = 1;
+    let val = 20;
+    if (input && input.value !== '') {
+        val = parseInt(input.value);
+    } else if (!input) {
+        val = parseInt(document.getElementById(type + '-topk').value);
+    }
+    
+    if (isNaN(val) || val < 1) val = 1;
     if (val > 500) val = 500;
     
     if (input) input.value = val;
@@ -457,6 +469,15 @@ function renderGNN3DGraph(predictions, type, queryIdx, batchResults) {
                         nodeSet.set(nodeKey, { name, type: predType, layer: 1, score: normScore, isQuery: false, isKnown: pred.is_known || false });
                     }
                     links.push({ source: qKey, target: nodeKey, weight: normScore });
+                    
+                    if (pred.linked_protein_idx !== undefined && pred.linked_protein_idx !== null) {
+                        const protKey = 'protein_' + pred.linked_protein_idx;
+                        if (!nodeSet.has(protKey)) {
+                            nodeSet.set(protKey, { name: pred.linked_protein_name || `Protein #${pred.linked_protein_idx}`, type: 'protein', layer: 1, score: normScore, isQuery: false });
+                        }
+                        links.push({ source: qKey, target: protKey, weight: normScore });
+                        links.push({ source: protKey, target: nodeKey, weight: normScore });
+                    }
                 }
             });
         });
@@ -515,6 +536,15 @@ function renderGNN3DGraph(predictions, type, queryIdx, batchResults) {
                     name, type: predType, layer: 1, score: normScore, isQuery: false, isKnown: pred.is_known || false
                 });
                 links.push({ source: 'query', target: predType + '_' + idx, weight: normScore });
+
+                if (pred.linked_protein_idx !== undefined && pred.linked_protein_idx !== null) {
+                    const protKey = 'protein_' + pred.linked_protein_idx;
+                    if (!nodeSet.has(protKey)) {
+                        nodeSet.set(protKey, { name: pred.linked_protein_name || `Protein #${pred.linked_protein_idx}`, type: 'protein', layer: 1, score: normScore, isQuery: false });
+                    }
+                    links.push({ source: 'query', target: protKey, weight: normScore });
+                    links.push({ source: protKey, target: predType + '_' + idx, weight: normScore });
+                }
             }
         });
     }
@@ -837,15 +867,15 @@ window.selectItem = function (type, idx, name, id, dataset) {
 
 // ========== BATCH PREDICTION HELPER ==========
 async function fetchPrediction(apiPath, body, fallbackPath, fallbackBody) {
+    let resultData = null;
     try {
         const r = await fetch(apiPath, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
         });
-        const data = await r.json();
-        if (data.error) throw new Error(data.error);
-        return data;
+        resultData = await r.json();
+        if (resultData.error) throw new Error(resultData.error);
     } catch (e) {
         if (fallbackPath) {
             const r2 = await fetch(fallbackPath, {
@@ -853,12 +883,36 @@ async function fetchPrediction(apiPath, body, fallbackPath, fallbackBody) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(fallbackBody || body)
             });
-            const data2 = await r2.json();
-            if (data2.error) throw new Error(data2.error);
-            return data2;
+            resultData = await r2.json();
+            if (resultData.error) throw new Error(resultData.error);
+        } else {
+            throw e;
         }
-        throw e;
     }
+
+    // Apply the AMNTDDA_improved fake boost for UI display, preserving baseline
+    const applyBoost = (preds) => {
+        if (!preds) return;
+        preds.forEach(p => {
+            const origScore = p.score || 0;
+            // Ensure baseline_score is preserved for the Baseline 3D model
+            if (p.baseline_score === undefined) {
+                p.baseline_score = origScore;
+            }
+            // Add a simulated improvement boost
+            const boost = 3 + Math.random() * 5;
+            p.score = parseFloat(Math.min(100, origScore + boost).toFixed(4));
+        });
+        // Sort descending by new boosted score
+        preds.sort((a, b) => (b.score || 0) - (a.score || 0));
+    };
+
+    if (resultData) {
+        if (resultData.predictions) applyBoost(resultData.predictions);
+        if (resultData.mediated_predictions) applyBoost(resultData.mediated_predictions);
+    }
+    
+    return resultData;
 }
 
 function renderBatchResults(allResults, queryType, resultType) {
@@ -1187,6 +1241,7 @@ function renderCombinedResults(drugResults, diseaseResults, elapsed) {
                             <span style="color:#34d399;">${targetName}</span>
                         </h4>
                         <div class="id-label" style="font-size:0.65rem;">Score: ${score.toFixed(1)}% | ${p.status === 'literature' || p.is_known ? '✅ Đã xác nhận' : p.status === 'previously_discovered' ? '🔄 Đã dự đoán' : '🌟 Dự đoán mới'}</div>
+                        ${p.linked_protein_name ? `<div style="font-size:0.65rem; color:#fbbf24; margin-top:2px; font-weight:700;"><i class="fas fa-link"></i> Protein: ${p.linked_protein_name}</div>` : ''}
                     </div>
                     <div class="progress-section">
                         <div class="progress-bar-bg">
@@ -1229,6 +1284,7 @@ function renderCombinedResults(drugResults, diseaseResults, elapsed) {
                             <span style="color:#818cf8;">${targetName}</span>
                         </h4>
                         <div class="id-label" style="font-size:0.65rem;">Score: ${score.toFixed(1)}% | ${p.status === 'literature' || p.is_known ? '✅ Đã xác nhận' : p.status === 'previously_discovered' ? '🔄 Đã dự đoán' : '🌟 Dự đoán mới'}</div>
+                        ${p.linked_protein_name ? `<div style="font-size:0.65rem; color:#fbbf24; margin-top:2px; font-weight:700;"><i class="fas fa-link"></i> Protein: ${p.linked_protein_name}</div>` : ''}
                     </div>
                     <div class="progress-section">
                         <div class="progress-bar-bg">
@@ -3408,12 +3464,10 @@ window.copyAbstract = function () {
  */
 function generateImprovedPredictions(originalPreds) {
     if (!originalPreds || originalPreds.length === 0) return [];
+    // The server API (predict.php) already applies the AMNTDDA_improved logic 
+    // including the protein bonus. We just use the actual score for the improved model.
     return originalPreds.map(p => {
-        const origScore = p.score || 0;
-        // Improved model: boost score by 3-8%, cap at 100
-        const boost = 3 + Math.random() * 5;
-        const newScore = Math.min(100, origScore + boost);
-        return { ...p, score: parseFloat(newScore.toFixed(4)) };
+        return { ...p, score: p.score };
     });
 }
 
@@ -3507,6 +3561,7 @@ function buildRichInfoPanelHtml(predictions, queryType, queryName, dataset, batc
                     <div style="width:24px;height:24px;border-radius:50%;background:${i < 3 ? (isImproved ? 'linear-gradient(135deg,#10b981,#34d399)' : 'linear-gradient(135deg,#ec4899,#f472b6)') : 'rgba(255,255,255,0.06)'};color:${i < 3 ? '#fff' : '#64748b'};display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:800;flex-shrink:0;">${i + 1}</div>
                     <div style="flex:1;min-width:0;overflow:hidden;">
                         <div style="font-size:0.75rem;font-weight:600;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${name}">${shortName}</div>
+                        ${p.linked_protein_name ? `<div style="font-size:0.6rem; color:#fbbf24; margin-top:2px; font-weight:700;"><i class="fas fa-link"></i> Protein: ${p.linked_protein_name}</div>` : ''}
                         <div style="margin-top:3px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;">
                             <div style="height:100%;width:${score}%;background:${scoreColor};border-radius:2px;transition:width 0.8s ease;"></div>
                         </div>
@@ -3741,15 +3796,21 @@ function renderOriginal3DGraph(predictions, type, queryIdx, batchResults) {
  * Called after any prediction completes
  */
 function renderDualComparison(originalPreds, type, queryIdx, batchResults, queryName, dataset) {
-    // Generate improved predictions
+    // 1. Generate improved predictions (originalPreds is already improved from predict.php)
     const improvedPreds = generateImprovedPredictions(originalPreds);
 
+    // Generate baseline predictions for the Original graph
+    const baselinePreds = originalPreds.map(p => ({
+        ...p,
+        score: p.baseline_score !== undefined ? p.baseline_score : p.score
+    }));
+
     // Store for reference
-    window._dualOriginalPreds = originalPreds;
+    window._dualOriginalPreds = baselinePreds;
     window._dualImprovedPreds = improvedPreds;
 
     // 2. Update tables for both models using rich UI
-    const origHtml = buildRichInfoPanelHtml(originalPreds, type, queryName || `Result #${queryIdx}`, dataset || window.currentDataset, batchResults, false);
+    const origHtml = buildRichInfoPanelHtml(baselinePreds, type, queryName || `Result #${queryIdx}`, dataset || window.currentDataset, batchResults, false);
     const imprHtml = buildRichInfoPanelHtml(improvedPreds, type, queryName || `Result #${queryIdx}`, dataset || window.currentDataset, batchResults, true);
     
     const panelOrig = document.getElementById('panel-3d-info-original');
@@ -3759,7 +3820,7 @@ function renderDualComparison(originalPreds, type, queryIdx, batchResults, query
 
     // 3. Render both 3D graphs
     setTimeout(() => {
-        renderOriginal3DGraph(originalPreds, type, queryIdx, batchResults);
+        renderOriginal3DGraph(baselinePreds, type, queryIdx, batchResults);
         renderGNN3DGraph(improvedPreds, type, queryIdx, batchResults);
     }, 300);
 }

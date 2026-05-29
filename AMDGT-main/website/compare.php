@@ -1222,9 +1222,6 @@ foreach ($metricKeys as $key) {
                         <th>Drug–Disease</th>
                         <th>Drug–Protein</th>
                         <th>Disease–Protein</th>
-                        <th>Drug–Drug</th>
-                        <th>Disease–Disease</th>
-                        <th>Protein–Protein</th>
                         <th>Sparsity</th>
                     </tr>
                 </thead>
@@ -1264,9 +1261,6 @@ foreach ($metricKeys as $key) {
                         <th>Drug–Disease</th>
                         <th>Drug–Protein</th>
                         <th>Disease–Protein</th>
-                        <th>Drug–Drug</th>
-                        <th>Disease–Disease</th>
-                        <th>Protein–Protein</th>
                         <th>Sparsity</th>
                     </tr>
                 </thead>

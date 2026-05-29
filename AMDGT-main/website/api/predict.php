@@ -236,8 +236,9 @@ function getCSVBasedPredictions($dataDir, $queryType, $queryIdx, $topK) {
         fgetcsv($h);
         while (($row = fgetcsv($h)) !== false) {
             if (count($row) >= 2) {
-                $p = intval($row[0]);
-                $di = intval($row[1]);
+                // In C-dataset, format is usually disease,protein
+                $di = intval($row[0]);
+                $p = intval($row[1]);
                 if (!isset($pdByDisease[$di])) $pdByDisease[$di] = [];
                 if (!in_array($p, $pdByDisease[$di])) $pdByDisease[$di][] = $p;
             }
@@ -294,9 +295,23 @@ function getCSVBasedPredictions($dataDir, $queryType, $queryIdx, $topK) {
                 ? ($queryDegree * $diseaseDegree) / ($queryDegree + $diseaseDegree)
                 : 0;
 
-            $score = $isKnown
-                ? 70 + ($jaccard * 30)
-                : ($jaccard * 60) + ($degreeScore / max($queryDegree, 1) * 40);
+            // Tính điểm protein bridge
+            $drugProteins = $dpByDrug[intval($queryIdx)] ?? [];
+            $diseaseProteins = $pdByDisease[$di] ?? [];
+            $sharedProteins = array_intersect($drugProteins, $diseaseProteins);
+            $sharedCount = count($sharedProteins);
+
+            if ($isKnown) {
+                $score = 70 + ($jaccard * 30);
+                $baselineScore = $score;
+            } else {
+                $score = ($jaccard * 60) + ($degreeScore / max($queryDegree, 1) * 40);
+                $baselineScore = $score;
+                if ($sharedCount > 0) {
+                    $proteinBonus = min(35, 10 + $sharedCount * 5); // Tối đa 35 điểm thưởng
+                    $score = ($score * 0.65) + $proteinBonus;
+                }
+            }
 
             $status = 'novel';
             if ($isKnown) {
@@ -324,6 +339,16 @@ function getCSVBasedPredictions($dataDir, $queryType, $queryIdx, $topK) {
                 }
             }
 
+            // Select a linked protein for the 3D model representation
+            $linkedProteinIdx = null;
+            if ($sharedCount > 0) {
+                $linkedProteinIdx = array_values($sharedProteins)[0];
+            } else if (count($drugProteins) > 0) {
+                $linkedProteinIdx = array_values($drugProteins)[0];
+            } else if (count($diseaseProteins) > 0) {
+                $linkedProteinIdx = array_values($diseaseProteins)[0];
+            }
+
             $diseaseName = $allNodes[$numDrugs + $di] ?? "Disease_$di";
             $diseaseId = $dbNames['disease_ids'][$di] ?? null;
 
@@ -332,12 +357,20 @@ function getCSVBasedPredictions($dataDir, $queryType, $queryIdx, $topK) {
                 continue;
             }
             if (!$diseaseId) $diseaseId = $diseaseName;
+            
+            $linkedProteinName = null;
+            if ($linkedProteinIdx !== null) {
+                $linkedProteinName = $allNodes[$numDrugs + $numDiseases + $linkedProteinIdx] ?? "Protein_$linkedProteinIdx";
+            }
 
             $predictions[] = [
                 'disease_idx' => $di,
                 'disease_id' => $diseaseId,
                 'disease_name' => $diseaseName,
+                'linked_protein_idx' => $linkedProteinIdx,
+                'linked_protein_name' => $linkedProteinName,
                 'score' => min(100, max(0, floatval($score))),
+                'baseline_score' => min(100, max(0, floatval($baselineScore))),
                 'is_known' => $isKnown,
                 'status' => $status,
                 'rank' => 0
@@ -361,9 +394,23 @@ function getCSVBasedPredictions($dataDir, $queryType, $queryIdx, $topK) {
                 ? ($queryDegree * $drugDegree) / ($queryDegree + $drugDegree)
                 : 0;
 
-            $score = $isKnown
-                ? 70 + ($jaccard * 30)
-                : ($jaccard * 60) + ($degreeScore / max($queryDegree, 1) * 40);
+            // Tính điểm protein bridge
+            $diseaseProteins = $pdByDisease[intval($queryIdx)] ?? [];
+            $drugProteins = $dpByDrug[$dri] ?? [];
+            $sharedProteins = array_intersect($drugProteins, $diseaseProteins);
+            $sharedCount = count($sharedProteins);
+
+            if ($isKnown) {
+                $score = 70 + ($jaccard * 30);
+                $baselineScore = $score;
+            } else {
+                $score = ($jaccard * 60) + ($degreeScore / max($queryDegree, 1) * 40);
+                $baselineScore = $score;
+                if ($sharedCount > 0) {
+                    $proteinBonus = min(35, 10 + $sharedCount * 5); // Tối đa 35 điểm thưởng
+                    $score = ($score * 0.65) + $proteinBonus;
+                }
+            }
 
             $status = 'novel';
             if ($isKnown) {
@@ -391,6 +438,16 @@ function getCSVBasedPredictions($dataDir, $queryType, $queryIdx, $topK) {
                 }
             }
 
+            // Select a linked protein for the 3D model representation
+            $linkedProteinIdx = null;
+            if ($sharedCount > 0) {
+                $linkedProteinIdx = array_values($sharedProteins)[0];
+            } else if (count($drugProteins) > 0) {
+                $linkedProteinIdx = array_values($drugProteins)[0];
+            } else if (count($diseaseProteins) > 0) {
+                $linkedProteinIdx = array_values($diseaseProteins)[0];
+            }
+
             $drugName = $drugNames[$dri] ?? "Drug_$dri";
             $drugId = $dbNames['drug_ids'][$dri] ?? null;
 
@@ -399,12 +456,20 @@ function getCSVBasedPredictions($dataDir, $queryType, $queryIdx, $topK) {
                 continue;
             }
             if (!$drugId) $drugId = $drugName;
+            
+            $linkedProteinName = null;
+            if ($linkedProteinIdx !== null) {
+                $linkedProteinName = $allNodes[$numDrugs + $numDiseases + $linkedProteinIdx] ?? "Protein_$linkedProteinIdx";
+            }
 
             $predictions[] = [
                 'drug_idx' => $dri,
                 'drug_id' => $drugId,
                 'drug_name' => $drugName,
+                'linked_protein_idx' => $linkedProteinIdx,
+                'linked_protein_name' => $linkedProteinName,
                 'score' => min(100, max(0, floatval($score))),
+                'baseline_score' => min(100, max(0, floatval($baselineScore))),
                 'is_known' => $isKnown,
                 'status' => $status,
                 'rank' => 0

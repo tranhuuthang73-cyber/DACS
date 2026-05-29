@@ -1081,9 +1081,21 @@ if ($action === 'pathway') {
     $sharedProteins = array_intersect($linkedProteins, $diseaseProteins);
 
     
-    // Remove duplicates and take exactly up to 3 proteins to match bulk_pathway
+    // Remove duplicates and take exactly up to 15 proteins
     $sharedProteins = array_unique($sharedProteins);
-    $topProteins = array_slice($sharedProteins, 0, 3);
+    
+    $topProteins = array_slice($sharedProteins, 0, 15);
+    
+    // FALLBACK: If no shared proteins, pick one that is linked to the drug or disease
+    if (empty($topProteins)) {
+        if (!empty($linkedProteins)) {
+            $idx = ($drugIdx + $diseaseIdx) % count($linkedProteins);
+            $topProteins = [$linkedProteins[$idx]];
+        } elseif (!empty($diseaseProteins)) {
+            $idx = ($drugIdx + $diseaseIdx) % count($diseaseProteins);
+            $topProteins = [$diseaseProteins[$idx]];
+        }
+    }
 
     // Build sankey nodes
     $nodes = [];
@@ -1692,18 +1704,21 @@ if ($action === 'proteins_for_pair') {
     // Find shared proteins (mediating)
     $sharedProteins = array_intersect($drugProteins, $diseaseProteins);
     
-    // MATCH BULK_PATHWAY AND PATHWAY LOGIC EXACTLY (DETERMINISTIC FALLBACK):
-    if (empty($sharedProteins) && count($drugProteins) > 0) {
-        $idx = ($drugIdx + $diseaseIdx) % count($drugProteins);
-        $sharedProteins = [$drugProteins[$idx]];
-    } elseif (empty($sharedProteins) && count($diseaseProteins) > 0) {
-        $idx = ($drugIdx + $diseaseIdx) % count($diseaseProteins);
-        $sharedProteins = [$diseaseProteins[$idx]];
-    }
-    
-    // Remove duplicates and take exactly up to 3 proteins
+    // Remove duplicates and take exactly up to 15 proteins
     $sharedProteins = array_unique($sharedProteins);
-    $topProteins = array_slice($sharedProteins, 0, 3);
+    
+    $topProteins = array_slice($sharedProteins, 0, 15);
+    
+    // FALLBACK: If no shared proteins, pick one that is linked to the drug or disease
+    if (empty($topProteins)) {
+        if (!empty($drugProteins)) {
+            $idx = ($drugIdx + $diseaseIdx) % count($drugProteins);
+            $topProteins = [$drugProteins[$idx]];
+        } elseif (!empty($diseaseProteins)) {
+            $idx = ($drugIdx + $diseaseIdx) % count($diseaseProteins);
+            $topProteins = [$diseaseProteins[$idx]];
+        }
+    }
 
     $results = [];
 
@@ -1712,12 +1727,22 @@ if ($action === 'proteins_for_pair') {
         $info = $proteinInfo[$pIdx] ?? null;
         if (!$info) continue;
         $seq = $info['sequence'];
+        
+        $role = 'mediating';
+        if (!in_array($pIdx, $sharedProteins)) {
+            if (in_array($pIdx, $drugProteins)) {
+                $role = 'drug_linked';
+            } elseif (in_array($pIdx, $diseaseProteins)) {
+                $role = 'disease_linked';
+            }
+        }
+        
         $results[] = [
             'idx' => $pIdx,
             'uniprot_id' => $info['uniprot_id'],
             'sequence' => $seq,
             'length' => strlen($seq),
-            'role' => 'mediating',
+            'role' => $role,
             'amino_acid_stats' => computeAAStats($seq)
         ];
     }
